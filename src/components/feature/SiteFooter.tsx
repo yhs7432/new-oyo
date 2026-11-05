@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { channels, mapLink } from '@/config/channels';
 
 const label = 'mb-3 font-body text-[11px] uppercase tracking-[0.16em] text-primary-700';
@@ -21,6 +22,14 @@ export default function SiteFooter() {
             <p className="mt-4 max-w-[220px] text-[12px] leading-relaxed text-foreground-600">
               {t('footer.tagline')}
             </p>
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11.5px] text-foreground-700">
+              <Link to="/partner" className="cursor-pointer whitespace-nowrap hover:text-primary-700">
+                {t('footer.partnerLink')}
+              </Link>
+              <Link to="/how-to-order" className="cursor-pointer whitespace-nowrap hover:text-primary-700">
+                {t('nav.ordering')}
+              </Link>
+            </div>
             <div className="mt-5">
               <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-primary-700">{t('footer.channels')}</p>
               <div className="flex flex-wrap items-center gap-2">

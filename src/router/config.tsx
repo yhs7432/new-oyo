@@ -8,6 +8,7 @@ import AboutPage from "../pages/about/page";
 import OrderingPage from "../pages/how-to-order/page";
 import NewsPage from "../pages/news/page";
 import ContactPage from "../pages/contact/page";
+import PartnerPage from "../pages/partner/page";
 
 const routes: RouteObject[] = [
   {
@@ -45,6 +46,10 @@ const routes: RouteObject[] = [
   {
     path: "/how-to-order",
     element: <OrderingPage />,
+  },
+  {
+    path: "/partner",
+    element: <PartnerPage />,
   },
   {
     path: "/news",

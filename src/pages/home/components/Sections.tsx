@@ -87,8 +87,9 @@ export function Ordering() {
               {t('ordering.title')}
             </h2>
           </div>
-          <p className="max-w-sm text-[13px] leading-relaxed text-foreground-600 md:text-right">
-            {t('ordering.desc')}
+          <p className="max-w-sm text-[13px] leading-[1.85] text-foreground-600 md:text-right">
+            <span className="block break-keep">{t('ordering.descLine1')}</span>
+            <span className="mt-1 block break-keep text-foreground-500">{t('ordering.descLine2')}</span>
           </p>
         </div>
 

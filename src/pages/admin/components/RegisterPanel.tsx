@@ -1,9 +1,10 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { Product } from '@/types/product';
 import { createSheetRow, isWriterReady } from '@/services/sheetWrite';
 import {
   GRADE_OPTIONS,
   SHEET_CATEGORY_OPTIONS,
+  STOCK_PREFIX_OPTIONS,
   STOCK_STATUS_OPTIONS,
   conditionToSheet,
   mergeNotePhotos,
@@ -11,6 +12,7 @@ import {
   numericValue,
   todayIso,
 } from '@/pages/admin/utils';
+import type { StockPrefix } from '@/pages/admin/utils';
 
 interface Props {
   items: Product[];
@@ -20,9 +22,18 @@ interface Props {
 type SaveState = 'idle' | 'saving' | 'done' | 'error';
 
 export default function RegisterPanel({ items, onSaved }: Props) {
-  const suggestedId = useMemo(() => nextStockNumber(items.map((item) => item.id)), [items]);
+  const [prefix, setPrefix] = useState<StockPrefix>('OYO');
+  const suggestedId = useMemo(
+    () => nextStockNumber(items.map((item) => item.id), prefix),
+    [items, prefix],
+  );
 
   const [id, setId] = useState(suggestedId);
+  const [idTouched, setIdTouched] = useState(false);
+
+  useEffect(() => {
+    if (!idTouched) setId(suggestedId);
+  }, [suggestedId, idTouched]);
   const [registered, setRegistered] = useState(todayIso());
   const [box, setBox] = useState('');
   const [category, setCategory] = useState('Driver');
@@ -45,7 +56,8 @@ export default function RegisterPanel({ items, onSaved }: Props) {
   const [message, setMessage] = useState('');
 
   const resetForm = () => {
-    setId('');
+    setId(suggestedId);
+    setIdTouched(false);
     setRegistered(todayIso());
     setBox('');
     setCategory('Driver');
@@ -159,9 +171,34 @@ export default function RegisterPanel({ items, onSaved }: Props) {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <label className="block min-w-0">
               <span className={labelClass}>재고번호 *</span>
-              <input value={id} onChange={(event) => setId(event.target.value)} className={inputClass} />
-              <span className="mt-1 block text-[10.5px] text-foreground-500">
-                비워 두면 중복 확인이 안 됩니다. 예: {suggestedId}
+              <div className="flex items-stretch gap-2">
+                <select
+                  value={prefix}
+                  onChange={(event) => {
+                    setPrefix(event.target.value as StockPrefix);
+                    setIdTouched(false);
+                  }}
+                  className={`${inputClass} w-[92px] shrink-0 cursor-pointer px-2`}
+                  aria-label="재고번호 접두어"
+                >
+                  {STOCK_PREFIX_OPTIONS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  value={id}
+                  onChange={(event) => {
+                    setIdTouched(true);
+                    setId(event.target.value);
+                  }}
+                  className={`${inputClass} min-w-0 flex-1`}
+                />
+              </div>
+              <span className="mt-1 block text-[10.5px] leading-relaxed text-foreground-500">
+                OYO는 새로 보내는 재고, TH는 태국에 이미 있던 재고입니다. 비워 두면 중복 확인이
+                안 됩니다. 예: {suggestedId}
               </span>
             </label>
             <label className="block min-w-0">

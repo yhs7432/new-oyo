@@ -10,7 +10,7 @@ interface Props {
 }
 
 const COLUMNS = [
-  { name: '재고번호', desc: '상품 고유 코드 (예: TH-39). 상세 페이지 주소로 사용됩니다.' },
+  { name: '재고번호', desc: '상품 고유 코드 (예: OYO-40, TH-39). 상세 페이지 주소로 사용됩니다.' },
   { name: '등록일', desc: '시트에 입력한 날짜 그대로 표시됩니다.' },
   { name: '카테고리', desc: 'driver / wood / iron / utility / wedge / putter / bag / accessories' },
   { name: '브랜드', desc: '상품 목록의 브랜드 필터에 사용됩니다.' },

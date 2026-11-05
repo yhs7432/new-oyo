@@ -100,12 +100,12 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
           >
             {t('nav.login')}
           </Link>
-          <button
-            type="button"
+          <Link
+            to="/partner"
             className="cursor-pointer whitespace-nowrap rounded-md bg-primary-500 px-4 py-2 text-xs font-medium text-foreground-950 transition-colors hover:bg-primary-400"
           >
             {t('nav.partner')}
-          </button>
+          </Link>
           <div ref={langRef} className="relative ml-1">
             <button
               type="button"
@@ -184,12 +184,13 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
             >
               {t('nav.login')}
             </Link>
-            <button
-              type="button"
-              className="flex-1 cursor-pointer whitespace-nowrap rounded-md bg-primary-500 py-2.5 text-xs font-medium text-foreground-950"
+            <Link
+              to="/partner"
+              onClick={() => setOpen(false)}
+              className="flex flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-md bg-primary-500 py-2.5 text-xs font-medium text-foreground-950"
             >
               {t('nav.partner')}
-            </button>
+            </Link>
           </div>
           <div className="mt-5">
             <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-foreground-500">
