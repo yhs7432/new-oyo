@@ -6,6 +6,8 @@
  * and the admin console only knows that deployment URL.
  */
 
+import { invalidateCatalogue } from '@/services/catalogue';
+
 const SCRIPT_URL_KEY = 'oyogolf.admin.scriptUrl';
 const SCRIPT_TOKEN = 'oyogolf-sheet-2026';
 
@@ -151,6 +153,7 @@ async function send(payload: Record<string, unknown>): Promise<SheetWriteResult>
     if (!response.ok) {
       return { ok: false, sent: true, message: `시트 응답 오류 (${response.status})` };
     }
+    invalidateCatalogue();
     return { ok: true, sent: true, message: parsed?.message ?? '시트에 저장했습니다.' };
   } catch {
     // Apps Script does not always answer with CORS headers; the write still lands.
@@ -161,6 +164,7 @@ async function send(payload: Record<string, unknown>): Promise<SheetWriteResult>
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body,
       });
+      invalidateCatalogue();
       return {
         ok: true,
         sent: true,

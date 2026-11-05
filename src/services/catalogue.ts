@@ -213,6 +213,12 @@ export function mapSheetToProducts(csv: string): Product[] {
 let cache: Product[] | null = null;
 let pending: Promise<Product[]> | null = null;
 
+/** Drops the in-memory sheet cache so the next read picks up freshly written rows. */
+export function invalidateCatalogue(): void {
+  cache = null;
+  pending = null;
+}
+
 export async function fetchCatalogue(force = false): Promise<Product[]> {
   if (!force && cache) return cache;
   if (!force && pending) return pending;
