@@ -6,6 +6,8 @@ export default function PageHero({
   eyebrow,
   title,
   lead,
+  leadLine1,
+  leadLine2,
   crumbs,
   image,
   imageAlt,
@@ -13,6 +15,8 @@ export default function PageHero({
   eyebrow: string;
   title: string;
   lead: string;
+  leadLine1?: string;
+  leadLine2?: string;
   crumbs: Crumb[];
   image?: string;
   imageAlt?: string;
@@ -44,7 +48,14 @@ export default function PageHero({
             <h1 className="mt-4 font-heading text-[28px] leading-[1.3] text-foreground-950 md:text-[40px] md:leading-[1.25]">
               {title}
             </h1>
-            <p className="mt-4 max-w-xl text-[13px] leading-[1.9] text-foreground-600 md:text-[14px]">{lead}</p>
+            {leadLine1 && leadLine2 ? (
+              <p className="mt-4 max-w-xl text-[13px] leading-[1.9] text-foreground-600 md:text-[14px]">
+                <span className="block break-keep">{leadLine1}</span>
+                <span className="mt-1 block break-keep text-foreground-500">{leadLine2}</span>
+              </p>
+            ) : (
+              <p className="mt-4 max-w-xl text-[13px] leading-[1.9] text-foreground-600 md:text-[14px]">{lead}</p>
+            )}
           </div>
           {image && (
             <div className="w-full shrink-0 overflow-hidden rounded-lg bg-background-200 lg:w-[42%]">

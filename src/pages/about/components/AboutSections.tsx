@@ -147,7 +147,8 @@ export function Grading() {
             <h2 className={`mt-3 ${sectionTitle}`}>{t('aboutPage.gradingTitle')}</h2>
           </div>
           <p className="max-w-md text-[12.5px] leading-[1.85] text-foreground-600 md:text-right">
-            {t('aboutPage.gradingLead')}
+            <span className="block break-keep">{t('aboutPage.gradingLeadLine1')}</span>
+            <span className="mt-1 block break-keep text-foreground-500">{t('aboutPage.gradingLeadLine2')}</span>
           </p>
         </div>
 

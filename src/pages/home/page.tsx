@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { Link } from 'react-router-dom';
 import SiteHeader from '@/components/feature/SiteHeader';
 import SiteFooter from '@/components/feature/SiteFooter';
+import { lineChannel } from '@/config/channels';
 import Hero from './components/Hero';
 import { About, Ordering, News } from './components/Sections';
 
@@ -18,13 +18,15 @@ export default function Home() {
         <News />
       </main>
       <SiteFooter />
-      <Link
-        to="/contact"
+      <a
+        href={lineChannel?.href ?? 'https://line.me/R/ti/p/@908feqyl'}
+        target="_blank"
+        rel="noopener noreferrer"
         className="fixed bottom-5 right-5 z-40 inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border border-primary-500 bg-foreground-950 px-5 py-3 text-[12.5px] text-primary-400 transition-colors hover:bg-primary-500 hover:text-foreground-950"
       >
         <i className="ri-chat-3-line"></i>
         {t('line.chat')}
-      </Link>
+      </a>
     </div>
   );
 }

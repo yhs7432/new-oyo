@@ -12,6 +12,14 @@ import {
   parsePhotoUrls,
   statusClass,
 } from '@/pages/admin/utils';
+import {
+  SPECIAL_FLAG,
+  SPECIAL_PRICE,
+  isClubType,
+  isSpecial,
+  readNoteValue,
+  writeNoteValue,
+} from '@/utils/sheetNote';
 
 interface Props {
   product: Product;
@@ -44,6 +52,12 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const [cover, setCover] = useState(raw['헤드커버'] ?? (product.headCoverIncluded ? '포함' : '미포함'));
   const [photoText, setPhotoText] = useState(parsePhotoUrls(originalNote).join('\n'));
 
+  const initialSpecial = isSpecial(originalNote);
+  const initialSpecialPrice = readNoteValue(originalNote, SPECIAL_PRICE).replace(/[^0-9]/g, '');
+  const [special, setSpecial] = useState(initialSpecial);
+  const [specialPrice, setSpecialPrice] = useState(initialSpecialPrice);
+  const isClub = isClubType(product.type);
+
   const [state, setState] = useState<SaveState>('idle');
   const [message, setMessage] = useState('');
 
@@ -53,6 +67,12 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     .filter((line) => line.length > 0);
 
   const parsedPrice = Number(String(price).replace(/[^0-9.-]/g, '')) || 0;
+  const parsedSpecialPrice = Number(String(specialPrice).replace(/[^0-9]/g, '')) || 0;
+  const nextCategory = isClub ? (special ? 'events' : 'used') : 'accessories';
+  const specialDiscount =
+    special && parsedSpecialPrice > 0 && parsedPrice > parsedSpecialPrice
+      ? Math.round(((parsedPrice - parsedSpecialPrice) / parsedPrice) * 100)
+      : 0;
   const dirty =
     brand !== (raw['브랜드'] ?? product.brand) ||
     name !== (raw['상품명'] ?? product.name.en) ||
@@ -66,6 +86,8 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     location !== (raw['보관위치'] ?? '') ||
     staff !== (raw['담당자'] ?? '') ||
     cover !== (raw['헤드커버'] ?? (product.headCoverIncluded ? '포함' : '미포함')) ||
+    special !== initialSpecial ||
+    specialPrice !== initialSpecialPrice ||
     mergeNotePhotos(originalNote, photoUrls) !== mergeNotePhotos(originalNote, parsePhotoUrls(originalNote));
 
   const save = async () => {
@@ -73,6 +95,12 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     setMessage('');
 
     const nextNote = mergeNotePhotos(originalNote, photoUrls);
+    const noteWithSpecial = writeNoteValue(nextNote, SPECIAL_FLAG, special && isClub ? 'Y' : null);
+    const finalNote = writeNoteValue(
+      noteWithSpecial,
+      SPECIAL_PRICE,
+      special && isClub && parsedSpecialPrice > 0 ? String(parsedSpecialPrice) : null,
+    );
     const fields: Record<string, string | number> = {
       브랜드: brand.trim(),
       상품명: name.trim(),
@@ -87,7 +115,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
       보관위치: location.trim(),
       담당자: staff.trim(),
     };
-    if (nextNote !== originalNote) fields['비고'] = nextNote;
+    if (finalNote !== originalNote) fields['비고'] = finalNote;
 
     const result = await updateSheetRows([{ id: product.id, fields }]);
     setMessage(result.message);
@@ -271,7 +299,71 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             </div>
           )}
 
+          <div className="mt-4 rounded-md border border-background-200 bg-background-100/70 p-3.5">
+            <div className="flex flex-wrap items-start justify-between gap-2.5">
+              <div className="min-w-0">
+                <p className="text-[12px] font-medium text-foreground-900">홈페이지 노출 분류</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-foreground-600">
+                  {isClub
+                    ? special
+                      ? '특가 상품 페이지로 이동합니다.'
+                      : '골프채는 기본적으로 중고 상품 페이지에 노출됩니다.'
+                    : '골프채 외 상품은 액세서리 페이지로 자동 분류됩니다.'}
+                </p>
+              </div>
+              {isClub ? (
+                <button
+                  type="button"
+                  onClick={() => setSpecial((prev) => !prev)}
+                  className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border px-3 py-1.5 text-[11.5px] transition-colors ${
+                    special
+                      ? 'border-accent-500 bg-accent-500 text-background-50 hover:bg-accent-600'
+                      : 'border-background-300 bg-background-50 text-foreground-800 hover:border-primary-400'
+                  }`}
+                >
+                  <i className={special ? 'ri-price-tag-3-fill' : 'ri-price-tag-3-line'}></i>
+                  {special ? '특가 해제' : '특가 상품으로 설정'}
+                </button>
+              ) : (
+                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full bg-secondary-100 px-2.5 py-1 text-[10.5px] text-secondary-900">
+                  <i className="ri-price-tag-2-line"></i>
+                  액세서리 자동 분류
+                </span>
+              )}
+            </div>
+
+            {isClub && special && (
+              <div className="mt-3 grid grid-cols-1 gap-3 border-t border-background-200 pt-3 sm:grid-cols-2">
+                <label className="block min-w-0">
+                  <span className={labelClass}>특가 판매가 (THB)</span>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={specialPrice}
+                    onChange={(event) => setSpecialPrice(event.target.value.replace(/[^0-9]/g, ''))}
+                    placeholder="예: 7900"
+                    className={`${inputClass} text-right`}
+                  />
+                </label>
+                <div className="flex flex-col justify-end gap-1 text-[11px] leading-relaxed">
+                  <span className="text-foreground-600">
+                    정상가 {formatThb(parsedPrice)} → 특가 {formatThb(parsedSpecialPrice)}
+                  </span>
+                  <span className="text-accent-800">
+                    {specialDiscount > 0 ? `${specialDiscount}% 할인으로 표시됩니다.` : '특가가를 비우면 정상 판매가로 노출됩니다.'}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           <dl className="mt-4 rounded-md border border-background-200 bg-background-100/60 px-3.5 py-3 text-[12px]">
+            <div className="flex items-center justify-between gap-2">
+              <dt className="text-foreground-600">노출 분류</dt>
+              <dd className="text-foreground-900">
+                {nextCategory === 'events' ? '특가 상품' : nextCategory === 'used' ? '중고 상품' : '액세서리'}
+              </dd>
+            </div>
             <div className="flex items-center justify-between gap-2">
               <dt className="text-foreground-600">시트에 저장될 판매가</dt>
               <dd className="text-foreground-900">

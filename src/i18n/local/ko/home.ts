@@ -70,6 +70,8 @@ export default {
     direct: '직통',
     fax: '팩스',
     tagline: '한국에서 태국으로 공급하는 프리미엄 골프 장비 도매',
+    channels: '채널',
+    viewMap: '지도에서 보기',
     rights: '모든 권리 보유.',
   },
   catalogue: {
@@ -97,6 +99,7 @@ export default {
     noPhoto: '사진 준비 중',
     loading: '상품을 불러오는 중…',
     liveSheet: '구글시트 재고와 실시간 연동',
+    stockCount: '{{count}}개 보유',
     errorTitle: '상품 목록을 불러오지 못했습니다.',
     errorHelp: '인터넷 연결을 확인한 뒤 다시 시도해 주세요. 시트는 \'링크가 있는 모든 사용자\'로 공유되어 있어야 합니다.',
     retry: '다시 시도',

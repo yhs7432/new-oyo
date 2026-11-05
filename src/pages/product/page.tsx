@@ -8,6 +8,8 @@ import { products } from '@/mocks/products';
 import { useCatalogue } from '@/hooks/useCatalogue';
 import { fallbackImage } from '@/services/catalogue';
 import { categoryRoute, discountPercent, hasPrice, localizedName } from '@/utils/products';
+import { groupProducts } from '@/utils/grouping';
+import { lineChannel } from '@/config/channels';
 
 export default function ProductDetailPage() {
   const { t, i18n } = useTranslation();
@@ -33,11 +35,18 @@ export default function ProductDetailPage() {
   const related = useMemo(() => {
     if (!product) return [];
     if (demo) {
-      return products.filter((p) => p.category === product.category && p.id !== product.id).slice(0, 5);
+      return groupProducts(products.filter((p) => p.category === product.category && p.id !== product.id)).slice(0, 5);
     }
-    return items
-      .filter((p) => p.type === product.type && p.id !== product.id)
-      .slice(0, 5);
+    return groupProducts(items.filter((p) => p.type === product.type && p.id !== product.id)).slice(0, 5);
+  }, [product, demo, items]);
+
+  const stockTotal = useMemo(() => {
+    if (!product) return 1;
+    const source = demo ? products : items;
+    const group = groupProducts(source).find(
+      (item) => item.id === product.id || item.groupedIds?.includes(product.id),
+    );
+    return group?.stock ?? product.stock;
   }, [product, demo, items]);
 
   if (!product) {
@@ -95,12 +104,14 @@ export default function ProductDetailPage() {
 
   const specRows = [
     { key: 'type', value: t(`types.${product.type}`) },
-    { key: 'flex', value: product.flex ?? '—' },
+    ...(product.category === 'accessories' ? [] : [{ key: 'flex', value: product.flex ?? '—' }]),
     { key: 'spec', value: product.spec },
     { key: 'sku', value: product.id },
     { key: 'location', value: t(`locations.${product.location}`) },
-    { key: 'stock', value: String(product.stock) },
+    { key: 'stock', value: String(stockTotal) },
   ];
+
+  const lineHref = lineChannel?.href ?? 'https://line.me/R/ti/p/@908feqyl';
 
   return (
     <div className="min-h-screen bg-background-50">
@@ -237,7 +248,7 @@ export default function ProductDetailPage() {
                     {t(`locations.${product.location}`)}
                   </span>
                   <span className="rounded-full bg-background-100 px-3 py-1 text-[11px] text-foreground-700">
-                    {t('product.stock')} {product.stock}
+                    {t('product.stock')} {stockTotal}
                   </span>
                   {product.stockStatus && (
                     <span className="rounded-full bg-accent-100 px-3 py-1 text-[11px] text-accent-900">
@@ -311,13 +322,15 @@ export default function ProductDetailPage() {
                 </dl>
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                  <Link
-                    to="/contact"
+                  <a
+                    href={lineHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full bg-primary-500 px-6 py-3 text-[13px] font-medium text-foreground-950 transition-colors hover:bg-primary-400"
                   >
                     <i className="ri-chat-3-line"></i>
                     {t('product.inquire')}
-                  </Link>
+                  </a>
                   <Link
                     to="/products"
                     className="inline-flex cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-full border border-foreground-900 px-6 py-3 text-[13px] text-foreground-900 transition-colors hover:bg-foreground-900 hover:text-background-50"

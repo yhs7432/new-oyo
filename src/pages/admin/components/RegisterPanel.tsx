@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import type { Product } from '@/types/product';
 import { createSheetRow, isWriterReady } from '@/services/sheetWrite';
 import {
-  CATEGORY_TO_SHEET,
   GRADE_OPTIONS,
   SHEET_CATEGORY_OPTIONS,
   STOCK_STATUS_OPTIONS,
@@ -19,8 +18,6 @@ interface Props {
 }
 
 type SaveState = 'idle' | 'saving' | 'done' | 'error';
-
-const TYPE_KEYS = Object.keys(CATEGORY_TO_SHEET);
 
 export default function RegisterPanel({ items, onSaved }: Props) {
   const suggestedId = useMemo(() => nextStockNumber(items.map((item) => item.id)), [items]);
@@ -125,8 +122,8 @@ export default function RegisterPanel({ items, onSaved }: Props) {
         <div>
           <h1 className="font-heading text-2xl text-foreground-950">상품 등록</h1>
           <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-foreground-600">
-            여기서 저장하면 구글시트에 새 행이 추가되고, 웹노출을 Y로 두면 홈페이지에 바로
-            노출됩니다.
+            등록한 상품은 먼저 <strong className="font-medium text-foreground-800">중고 상품</strong>으로
+            들어갑니다. 시트에 새 행이 추가되고, 웹노출을 Y로 두면 홈페이지에 바로 노출됩니다.
           </p>
         </div>
         <span
@@ -140,6 +137,14 @@ export default function RegisterPanel({ items, onSaved }: Props) {
           {isWriterReady() ? '시트 쓰기 연결됨' : '시트 쓰기 미연결'}
         </span>
       </div>
+
+      <p className="mt-4 rounded-lg border border-secondary-300/70 bg-secondary-50 px-4 py-3 text-[11.5px] leading-relaxed text-secondary-900">
+        <i className="ri-price-tag-3-line mr-1"></i>
+        골프채(드라이버·우드·아이언·유틸·웨지·퍼터)는 중고 상품으로, 가방·그립·볼·거리측정기 같은
+        골프채 외 상품은 액세서리로 자동 분류됩니다. 등록 후
+        <strong className="font-medium"> 현재 재고</strong> 화면에서 <strong className="font-medium">특가</strong>
+        버튼을 누르면 특가 상품 페이지로 옮겨집니다.
+      </p>
 
       {!isWriterReady() && (
         <p className="mt-4 rounded-lg border border-accent-300/70 bg-accent-50 px-4 py-3 text-[11.5px] leading-relaxed text-accent-900">
@@ -169,7 +174,7 @@ export default function RegisterPanel({ items, onSaved }: Props) {
               />
             </label>
             <label className="block min-w-0">
-              <span className={labelClass}>카테고리</span>
+              <span className={labelClass}>상품 종류</span>
               <select
                 value={category}
                 onChange={(event) => setCategory(event.target.value)}
@@ -181,9 +186,8 @@ export default function RegisterPanel({ items, onSaved }: Props) {
                   </option>
                 ))}
               </select>
-              <span className="mt-1 block text-[10.5px] text-foreground-500">
-                앱에서는 {TYPE_KEYS.find((key) => CATEGORY_TO_SHEET[key] === category) ?? 'accessory'}
-                로 인식됩니다.
+              <span className="mt-1 block text-[10.5px] leading-relaxed text-foreground-500">
+                골프채 6종은 중고 상품, Bag·Accessories는 액세서리로 등록됩니다.
               </span>
             </label>
             <label className="block min-w-0">
@@ -364,10 +368,10 @@ export default function RegisterPanel({ items, onSaved }: Props) {
           <h2 className="text-[12.5px] font-medium text-foreground-900">등록 후 흐름</h2>
           <ol className="mt-3 flex flex-col gap-3">
             {[
-              '시트에 새 행이 추가됩니다. (웹노출 Y)',
-              '홈페이지 목록에 자동으로 나타납니다.',
+              '시트에 새 행이 중고 상품으로 추가됩니다. (웹노출 Y)',
+              '골프채 외 상품은 액세서리 페이지로 자동 분류됩니다.',
+              '특가로 내보낼 상품은 현재 재고 화면에서 “특가”를 누르세요.',
               '한국 출고 → 태국 입고 → 판매 순서로 상태를 바꿉니다.',
-              '사진은 드라이브 공유 링크를 그대로 붙여 넣으면 됩니다.',
             ].map((step, index) => (
               <li key={step} className="flex gap-2.5">
                 <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-secondary-100 text-[10.5px] font-medium text-secondary-900">

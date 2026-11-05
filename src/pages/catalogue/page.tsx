@@ -20,6 +20,8 @@ import {
   typesOf,
   type FilterState,
 } from '@/utils/products';
+import { groupProducts } from '@/utils/grouping';
+import { lineChannel } from '@/config/channels';
 
 const tabs: { label: string; to: string; category?: CategoryKey }[] = [
   { label: 'catalogue.tabs.all', to: '/products' },
@@ -33,22 +35,29 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
   const [filters, setFilters] = useState<FilterState>(emptyFilters);
   const [page, setPage] = useState(1);
 
-  const live = !category;
+  const live = true;
   const { items: sheetItems, loading, error, reload } = useCatalogue({ enabled: live });
+
+  const hasSheet = sheetItems.length > 0;
 
   useEffect(() => {
     setFilters(emptyFilters);
     setPage(1);
   }, [category]);
 
-  const base = useMemo(
-    () => (live ? sheetItems : productsOf(category)),
-    [live, sheetItems, category],
-  );
+  const base = useMemo(() => {
+    if (hasSheet) {
+      const list = category ? sheetItems.filter((item) => item.category === category) : sheetItems;
+      return groupProducts(list);
+    }
+    return groupProducts(productsOf(category));
+  }, [hasSheet, sheetItems, category]);
   const filtered = useMemo(() => filterProducts(base, filters), [base, filters]);
   const pages = totalPages(filtered.length);
   const currentPage = Math.min(page, pages);
   const visible = paginate(filtered, currentPage);
+  const showLoading = loading && !hasSheet;
+  const showError = Boolean(error) && !hasSheet;
 
   const update = (patch: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...patch }));
@@ -98,14 +107,8 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
               </div>
               <div className="flex flex-col items-start gap-1.5 md:items-end">
                 <p className="text-[12px] text-foreground-500">
-                  {loading && live ? t('catalogue.loading') : t('catalogue.count', { total: filtered.length })}
+                  {showLoading ? t('catalogue.loading') : t('catalogue.count', { total: filtered.length })}
                 </p>
-                {live && !loading && !error && (
-                  <p className="inline-flex items-center gap-1.5 text-[11px] text-foreground-400">
-                    <span className="inline-block h-1.5 w-1.5 rounded-full bg-accent-500"></span>
-                    {t('catalogue.liveSheet')}
-                  </p>
-                )}
               </div>
             </div>
 
@@ -136,11 +139,12 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
               filters={filters}
               types={typesOf(base)}
               brands={brandsOf(base)}
+              showFlex={category !== 'accessories'}
               onChange={update}
               onReset={reset}
             />
 
-            {loading && live ? (
+            {showLoading ? (
               <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5">
                 {Array.from({ length: 10 }).map((_, index) => (
                   <div
@@ -156,7 +160,7 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
                   </div>
                 ))}
               </div>
-            ) : error && live ? (
+            ) : showError ? (
               <div className="mt-8 flex flex-col items-center gap-3 rounded-lg border border-dashed border-background-300 bg-background-100 px-6 py-16 text-center">
                 <span className="flex h-11 w-11 items-center justify-center rounded-full bg-background-200 text-[18px] text-foreground-600">
                   <i className="ri-wifi-off-line"></i>
@@ -197,20 +201,22 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
               </div>
             )}
 
-            {!(loading && live) && !(error && live) && (
+            {!showLoading && !showError && (
               <Pagination page={currentPage} total={pages} onChange={setPage} />
             )}
           </div>
         </section>
       </main>
       <SiteFooter />
-      <Link
-        to="/contact"
+      <a
+        href={lineChannel?.href ?? 'https://line.me/R/ti/p/@908feqyl'}
+        target="_blank"
+        rel="noopener noreferrer"
         className="fixed bottom-5 right-5 z-40 inline-flex cursor-pointer items-center gap-2 whitespace-nowrap rounded-full border border-primary-500 bg-foreground-950 px-5 py-3 text-[12.5px] text-primary-400 transition-colors hover:bg-primary-500 hover:text-foreground-950"
       >
         <i className="ri-chat-3-line"></i>
         {t('line.chat')}
-      </Link>
+      </a>
     </div>
   );
 }

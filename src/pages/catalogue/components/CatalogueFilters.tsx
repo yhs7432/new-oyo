@@ -6,14 +6,18 @@ interface Props {
   filters: FilterState;
   types: ProductType[];
   brands: string[];
+  showFlex?: boolean;
   onChange: (patch: Partial<FilterState>) => void;
   onReset: () => void;
 }
 
 const control = 'h-10 w-full rounded-md border border-background-300 bg-background-50 px-3 text-[12.5px] text-foreground-800 outline-none transition-colors focus:border-primary-500';
 
-export default function CatalogueFilters({ filters, types, brands, onChange, onReset }: Props) {
+export default function CatalogueFilters({ filters, types, brands, showFlex = true, onChange, onReset }: Props) {
   const { t } = useTranslation();
+  const selectCols = showFlex
+    ? 'grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:ml-auto lg:w-auto lg:grid-cols-3'
+    : 'grid w-full grid-cols-2 gap-3 lg:ml-auto lg:w-[300px]';
 
   return (
     <div className="rounded-lg border border-background-200 bg-background-100 p-4 md:p-5">
@@ -31,7 +35,7 @@ export default function CatalogueFilters({ filters, types, brands, onChange, onR
           />
         </div>
 
-        <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-3 lg:ml-auto lg:w-auto lg:grid-cols-3">
+        <div className={selectCols}>
           <label className="block min-w-0">
             <span className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-foreground-500">
               {t('catalogue.brand')}
@@ -51,26 +55,28 @@ export default function CatalogueFilters({ filters, types, brands, onChange, onR
             </div>
           </label>
 
-          <label className="block min-w-0">
-            <span className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-foreground-500">
-              {t('catalogue.flex')}
-            </span>
-            <div className="relative">
-              <select
-                value={filters.flex}
-                onChange={(event) => onChange({ flex: event.target.value as Flex | 'all' })}
-                className={`${control} cursor-pointer appearance-none pr-8`}
-              >
-                <option value="all">{t('catalogue.allOption')}</option>
-                {flexOptions.map((flex) => (
-                  <option key={flex} value={flex}>{flex}</option>
-                ))}
-              </select>
-              <i className="ri-arrow-down-s-line pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[13px] text-foreground-500"></i>
-            </div>
-          </label>
+          {showFlex && (
+            <label className="block min-w-0">
+              <span className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-foreground-500">
+                {t('catalogue.flex')}
+              </span>
+              <div className="relative">
+                <select
+                  value={filters.flex}
+                  onChange={(event) => onChange({ flex: event.target.value as Flex | 'all' })}
+                  className={`${control} cursor-pointer appearance-none pr-8`}
+                >
+                  <option value="all">{t('catalogue.allOption')}</option>
+                  {flexOptions.map((flex) => (
+                    <option key={flex} value={flex}>{flex}</option>
+                  ))}
+                </select>
+                <i className="ri-arrow-down-s-line pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[13px] text-foreground-500"></i>
+              </div>
+            </label>
+          )}
 
-          <label className="col-span-2 block min-w-0 sm:col-span-1">
+          <label className={`block min-w-0 ${showFlex ? 'col-span-2 sm:col-span-1' : ''}`}>
             <span className="mb-1 block text-[10px] uppercase tracking-[0.14em] text-foreground-500">
               {t('catalogue.sort')}
             </span>

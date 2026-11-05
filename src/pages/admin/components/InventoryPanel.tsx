@@ -5,7 +5,15 @@ import { SHEET_EDIT_URL } from '@/config/admin';
 import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb, statusClass } from '@/pages/admin/utils';
 import ItemEditModal from '@/pages/admin/components/ItemEditModal';
-import { isWriterReady } from '@/services/sheetWrite';
+import { isWriterReady, updateSheetRows } from '@/services/sheetWrite';
+import {
+  CATEGORY_LABEL,
+  SPECIAL_FLAG,
+  SPECIAL_PRICE,
+  categoryBadgeClass,
+  isSpecial,
+  writeNoteValue,
+} from '@/utils/sheetNote';
 import { Link } from 'react-router-dom';
 
 interface Props {
@@ -25,6 +33,26 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const [notice, setNotice] = useState('');
+
+  const toggleSpecial = async (product: Product) => {
+    const note = product.raw?.['비고'] ?? '';
+    const turningOn = !isSpecial(note);
+    const nextNote = writeNoteValue(note, SPECIAL_FLAG, turningOn ? 'Y' : null);
+    const finalNote = turningOn ? nextNote : writeNoteValue(nextNote, SPECIAL_PRICE, null);
+
+    setBusyId(product.id);
+    setNotice('');
+    const result = await updateSheetRows([{ id: product.id, fields: { 비고: finalNote } }]);
+    setBusyId(null);
+    setNotice(
+      result.ok
+        ? `${product.id} · ${turningOn ? '특가 상품으로 이동했습니다.' : '중고 상품으로 돌렸습니다.'} ${result.message}`
+        : result.message,
+    );
+    if (result.ok) onRetry();
+  };
 
   const statusOptions = useMemo(
     () =>
@@ -72,7 +100,8 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
         <div>
           <h1 className="font-heading text-2xl text-foreground-950">현재 재고</h1>
           <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-foreground-600">
-            시트의 재고를 검색·필터로 확인하고, 수정한 내용은 그대로 구글시트에 저장됩니다.
+            시트의 재고를 검색·필터로 확인하고, 수정한 내용은 그대로 구글시트에 저장됩니다. 골프채는
+            중고 상품으로, 골프채 외 상품은 액세서리로 자동 분류됩니다.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -117,10 +146,10 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
             aria-label="카테고리"
             className="w-full box-border cursor-pointer rounded-md border border-background-300 bg-background-100 px-3 py-2 text-sm text-foreground-900 outline-none focus:border-primary-500 lg:w-40"
           >
-            <option value="all">전체 카테고리</option>
+            <option value="all">전체 종류</option>
             {typeOptions.map((option) => (
               <option key={option} value={option}>
-                {option === 'accessory' ? '액세서리' : option}
+                {option === 'accessory' ? '액세서리' : option === 'bag' ? '가방' : option}
               </option>
             ))}
           </select>
@@ -172,6 +201,13 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
           <i className="ri-information-line mr-1"></i>
           아직 시트 쓰기 연결이 없습니다. “시트 연동” 화면에서 연결하면 여기서 저장한 값이 실제
           시트에 기록되고 홈페이지에 반영됩니다.
+        </p>
+      )}
+
+      {notice && (
+        <p className="mt-4 rounded-lg border border-secondary-300/70 bg-secondary-50 px-4 py-2.5 text-[11.5px] leading-relaxed text-secondary-900">
+          <i className="ri-arrow-left-right-line mr-1"></i>
+          {notice}
         </p>
       )}
 
@@ -236,8 +272,15 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                           <p className="max-w-[250px] truncate text-[12.5px] font-medium text-foreground-900">
                             {product.name.en}
                           </p>
-                          <p className="mt-0.5 text-[10.5px] text-foreground-500">
-                            {product.brand} · {product.id}
+                          <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[10.5px] text-foreground-500">
+                            <span
+                              className={`rounded-full px-1.5 py-0.5 text-[9.5px] ${categoryBadgeClass(product.category)}`}
+                            >
+                              {CATEGORY_LABEL[product.category]}
+                            </span>
+                            <span>
+                              {product.brand} · {product.id}
+                            </span>
                           </p>
                           <p className="text-[10.5px] text-foreground-500">
                             {product.addedAt || '등록일 없음'}
@@ -276,6 +319,36 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                         >
                           상세
                         </Link>
+                        {product.category !== 'accessories' && (
+                          <button
+                            type="button"
+                            onClick={() => void toggleSpecial(product)}
+                            disabled={busyId === product.id || !isWriterReady()}
+                            title={
+                              isWriterReady()
+                                ? product.category === 'events'
+                                  ? '중고 상품으로 되돌립니다'
+                                  : '특가 상품 페이지로 옮깁니다'
+                                : '시트 쓰기 연결 후 사용할 수 있습니다'
+                            }
+                            className={`inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded border px-2 py-1 text-[11px] transition-colors disabled:cursor-not-allowed disabled:opacity-40 ${
+                              product.category === 'events'
+                                ? 'border-accent-500 bg-accent-500 text-background-50 hover:bg-accent-600'
+                                : 'border-background-300 text-foreground-800 hover:border-primary-400'
+                            }`}
+                          >
+                            <i
+                              className={
+                                busyId === product.id
+                                  ? 'ri-loader-4-line animate-spin'
+                                  : product.category === 'events'
+                                    ? 'ri-arrow-go-back-line'
+                                    : 'ri-price-tag-3-line'
+                              }
+                            ></i>
+                            {product.category === 'events' ? '특가 해제' : '특가'}
+                          </button>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">

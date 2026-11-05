@@ -70,6 +70,8 @@ export default {
     direct: 'Direct',
     fax: 'Fax',
     tagline: 'Premium golf equipment, wholesale from Korea to Thailand.',
+    channels: 'Channels',
+    viewMap: 'View on map',
     rights: 'All rights reserved.',
   },
   catalogue: {
@@ -97,6 +99,7 @@ export default {
     noPhoto: 'Photo coming',
     loading: 'Loading products…',
     liveSheet: 'Live stock from our Google Sheet',
+    stockCount: '{{count}} in stock',
     errorTitle: 'We could not load the product list.',
     errorHelp: 'Please check your connection and try again. The sheet link must stay shared as “anyone with the link”.',
     retry: 'Try again',

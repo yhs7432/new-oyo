@@ -4,9 +4,21 @@ import SiteFooter from '@/components/feature/SiteFooter';
 import PageHero from '@/components/feature/PageHero';
 import InquiryForm from './components/InquiryForm';
 import ContactInfo from './components/ContactInfo';
+import ChannelsCard from './components/ChannelsCard';
 
 export default function ContactPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+
+  const mapLanguage = i18n.language.startsWith('ko')
+    ? 'ko'
+    : i18n.language.startsWith('th')
+      ? 'th'
+      : 'en';
+
+  const mapSrc =
+    `https://maps.google.com/maps?hl=${mapLanguage}` +
+    '&q=Only%20One%20Golf%2C%20No.%201%20Soi%20Bearing%205%2C%20Krung%20Thep%20Maha%20Nakhon%2C%20Bangkok%2010260%2C%20Thailand' +
+    '&z=17&ie=UTF8&iwloc=B&output=embed';
 
   return (
     <div className="min-h-screen bg-background-50">
@@ -16,11 +28,16 @@ export default function ContactPage() {
           eyebrow={t('contactPage.eyebrow')}
           title={t('contactPage.title')}
           lead={t('contactPage.lead')}
+          leadLine1={t('contactPage.leadLine1')}
+          leadLine2={t('contactPage.leadLine2')}
           crumbs={[{ label: t('catalogue.breadcrumbHome'), to: '/' }, { label: t('nav.contact') }]}
         />
         <section className="px-5 py-12 md:px-10 md:py-16">
           <div className="mx-auto grid w-full max-w-[1320px] grid-cols-1 gap-6 lg:grid-cols-[1.1fr_1fr] lg:gap-8">
-            <ContactInfo />
+            <div className="flex flex-col gap-6">
+              <ChannelsCard />
+              <ContactInfo />
+            </div>
             <InquiryForm />
           </div>
         </section>
@@ -36,7 +53,7 @@ export default function ContactPage() {
             <div className="mt-5 overflow-hidden rounded-lg border border-background-200 bg-background-50">
               <iframe
                 title={t('contactPage.mapTitle')}
-                src="https://www.google.com/maps?q=No.+1+Bearing+Soi+5,+Sukhumvit+107,+Bang+Na+Tai,+Bang+Na,+Bangkok+10260,+Thailand&output=embed"
+                src={mapSrc}
                 width="100%"
                 height="360"
                 loading="lazy"

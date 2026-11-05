@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next';
+import { channels, mapLink } from '@/config/channels';
 
 const label = 'mb-3 font-body text-[11px] uppercase tracking-[0.16em] text-primary-700';
 const sub = 'mb-1 block text-[10.5px] uppercase tracking-[0.1em] text-foreground-500';
@@ -20,6 +21,24 @@ export default function SiteFooter() {
             <p className="mt-4 max-w-[220px] text-[12px] leading-relaxed text-foreground-600">
               {t('footer.tagline')}
             </p>
+            <div className="mt-5">
+              <p className="mb-2 text-[10px] uppercase tracking-[0.16em] text-primary-700">{t('footer.channels')}</p>
+              <div className="flex flex-wrap items-center gap-2">
+                {channels.map((channel) => (
+                  <a
+                    key={channel.id}
+                    href={channel.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={channel.name}
+                    title={`${channel.name} ${channel.handle}`}
+                    className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-background-300 bg-background-50 text-[15px] text-foreground-700 transition-colors hover:border-primary-500 hover:text-primary-700"
+                  >
+                    <i className={channel.icon}></i>
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
           <div>
             <h4 className={label}>{t('footer.company')}</h4>
@@ -32,6 +51,18 @@ export default function SiteFooter() {
               <span className={sub}>{t('footer.registeredOffice')}</span>
               No. 1 Bearing Soi 5, Sukhumvit 107, Bang Na Tai, Bang Na, Bangkok 10260, Thailand
             </p>
+            <a
+              href={mapLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-2 inline-flex cursor-pointer items-center gap-1.5 text-[11.5px] text-foreground-700 transition-colors hover:text-primary-700"
+            >
+              <span className="flex h-3.5 w-3.5 items-center justify-center">
+                <i className="ri-map-pin-line text-[13px]"></i>
+              </span>
+              {t('footer.viewMap')}
+              <i className="ri-arrow-right-up-line text-[12px]"></i>
+            </a>
           </div>
           <div>
             <h4 className={label}>{t('footer.contact')}</h4>

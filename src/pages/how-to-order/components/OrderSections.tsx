@@ -1,24 +1,46 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import { lineChannel } from '@/config/channels';
 
-const steps = [
-  { key: 'one', icon: 'ri-user-add-line', num: '01' },
-  { key: 'two', icon: 'ri-search-line', num: '02' },
-  { key: 'three', icon: 'ri-chat-3-line', num: '03' },
-  { key: 'four', icon: 'ri-truck-line', num: '04' },
+const stepsByPath = {
+  partner: [
+    { key: 'one', icon: 'ri-store-2-line', num: '01' },
+    { key: 'two', icon: 'ri-search-line', num: '02' },
+    { key: 'three', icon: 'ri-price-tag-3-line', num: '03' },
+    { key: 'four', icon: 'ri-truck-line', num: '04' },
+  ],
+  retail: [
+    { key: 'one', icon: 'ri-search-line', num: '01' },
+    { key: 'two', icon: 'ri-chat-3-line', num: '02' },
+    { key: 'three', icon: 'ri-bank-card-line', num: '03' },
+    { key: 'four', icon: 'ri-truck-line', num: '04' },
+  ],
+} as const;
+
+type PathKey = keyof typeof stepsByPath;
+
+const paths: { key: PathKey; icon: string }[] = [
+  { key: 'partner', icon: 'ri-store-2-line' },
+  { key: 'retail', icon: 'ri-user-line' },
 ];
+
+const LINE_FALLBACK = 'https://line.me/R/ti/p/@908feqyl';
 
 const terms = [
   { key: 'min', icon: 'ri-stack-line' },
+  { key: 'price', icon: 'ri-price-tag-3-line' },
   { key: 'pay', icon: 'ri-bank-card-line' },
   { key: 'ship', icon: 'ri-truck-line' },
 ];
 
-const faqKeys = ['q1', 'q2', 'q3', 'q4'];
+const faqKeys = ['q1', 'q2', 'q3', 'q4', 'q5'];
 
 export function OrderSteps() {
   const { t } = useTranslation();
+  const [path, setPath] = useState<PathKey>('partner');
+  const steps = stepsByPath[path];
+  const lineStepKey = path === 'partner' ? 'three' : 'two';
 
   return (
     <section className="bg-background-50 px-5 py-14 md:px-10 md:py-20">
@@ -27,17 +49,48 @@ export function OrderSteps() {
           <h2 className="font-heading text-[24px] leading-[1.35] text-foreground-950 md:text-[32px]">
             {t('orderPage.stepsTitle')}
           </h2>
-          <p className="max-w-sm text-[12.5px] leading-relaxed text-foreground-600 sm:text-right">
-            {t('orderPage.lead')}
+          <p className="max-w-md text-[12.5px] leading-[1.8] text-foreground-600 sm:text-right">
+            <span className="block break-keep">{t('orderPage.leadLine1')}</span>
+            <span className="mt-1 block break-keep text-foreground-500">{t('orderPage.leadLine2')}</span>
           </p>
         </div>
 
-        <ol className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
+        <div className="mt-7 flex flex-col gap-3 border-y border-background-200 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="inline-flex flex-wrap gap-1 rounded-full border border-background-300 bg-background-100 p-1" role="tablist" aria-label={t('orderPage.stepsTitle')}>
+            {paths.map((item) => {
+              const active = path === item.key;
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  onClick={() => setPath(item.key)}
+                  className={`inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-4 py-2 text-[12px] transition-colors ${
+                    active
+                      ? 'bg-foreground-900 text-background-50'
+                      : 'text-foreground-700 hover:bg-background-200/70'
+                  }`}
+                >
+                  <i className={`${item.icon} text-[13px]`}></i>
+                  {t(`orderPage.paths.${item.key}`)}
+                </button>
+              );
+            })}
+          </div>
+          <p className="text-[11.5px] leading-relaxed text-foreground-500">
+            {t(`orderPage.pathNotes.${path}`)}
+          </p>
+        </div>
+
+        <ol key={path} className="mt-7 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5">
           {steps.map((step, index) => (
             <li
               key={step.key}
               className={`relative rounded-lg border p-5 md:p-6 ${
-                index === 0 ? 'border-accent-500 bg-accent-500 text-background-50' : 'border-background-200 bg-background-100'
+                index === 0
+                  ? 'border-accent-500 bg-accent-500 text-background-50'
+                  : 'border-background-200 bg-background-100'
               }`}
             >
               <div className="flex items-start justify-between gap-4">
@@ -61,25 +114,42 @@ export function OrderSteps() {
                   index === 0 ? 'text-background-50' : 'text-foreground-950'
                 }`}
               >
-                {t(`orderPage.steps.${step.key}.title`)}
+                {t(`orderPage.steps.${path}.${step.key}.title`)}
               </h3>
               <p
                 className={`mt-2 text-[12.5px] leading-[1.85] ${
                   index === 0 ? 'text-background-100' : 'text-foreground-600'
                 }`}
               >
-                {t(`orderPage.steps.${step.key}.desc`)}
+                {t(`orderPage.steps.${path}.${step.key}.desc`)}
               </p>
-              <p
-                className={`mt-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] ${
-                  index === 0
-                    ? 'bg-background-50/15 text-background-50'
-                    : 'bg-background-200/70 text-foreground-700'
-                }`}
-              >
-                <i className="ri-information-line text-[12px]"></i>
-                {t(`orderPage.steps.${step.key}.note`)}
-              </p>
+              {step.key === lineStepKey ? (
+                <a
+                  href={lineChannel?.href ?? LINE_FALLBACK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] transition-colors ${
+                    index === 0
+                      ? 'bg-background-50/15 text-background-50 hover:bg-background-50/25'
+                      : 'bg-background-200/70 text-foreground-700 hover:bg-background-200'
+                  }`}
+                >
+                  <i className="ri-information-line text-[12px]"></i>
+                  {t(`orderPage.steps.${path}.${step.key}.note`)}
+                  <i className="ri-arrow-right-up-line text-[11px]"></i>
+                </a>
+              ) : (
+                <p
+                  className={`mt-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] ${
+                    index === 0
+                      ? 'bg-background-50/15 text-background-50'
+                      : 'bg-background-200/70 text-foreground-700'
+                  }`}
+                >
+                  <i className="ri-information-line text-[12px]"></i>
+                  {t(`orderPage.steps.${path}.${step.key}.note`)}
+                </p>
+              )}
             </li>
           ))}
         </ol>
@@ -95,7 +165,7 @@ export function OrderTerms() {
     <section className="border-y border-background-200 bg-background-100 px-5 py-12 md:px-10 md:py-16">
       <div className="mx-auto w-full max-w-[1320px]">
         <h2 className="text-[10px] uppercase tracking-[0.3em] text-foreground-500">{t('orderPage.termsTitle')}</h2>
-        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-4">
           {terms.map((term) => (
             <article key={term.key} className="rounded-lg border border-background-200 bg-background-50 p-5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-100 text-[15px] text-accent-900">

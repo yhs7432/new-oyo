@@ -51,4 +51,9 @@ export interface Product {
   description?: string;
   /** Raw sheet row keyed by column name, used by the admin console when writing back. */
   raw?: Record<string, string>;
+  /**
+   * Sheet row ids merged into this card on the website.
+   * The sheet keeps every row separately; this is display-only.
+   */
+  groupedIds?: string[];
 }

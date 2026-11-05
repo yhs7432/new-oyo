@@ -1,5 +1,6 @@
 import { SHEET_CSV_URL } from '@/config/sheet';
 import type { Flex, Grade, Product, ProductType } from '@/types/product';
+import { noteSpecialPrice, resolveCategory } from '@/utils/sheetNote';
 
 const FALLBACK_IMAGES: Record<ProductType, string> = {
   driver:
@@ -140,7 +141,7 @@ function cleanDescription(note: string): string {
     .split('|')
     .map((segment) => segment.trim())
     .filter((segment) => segment.length > 0)
-    .filter((segment) => !/^(사진|박스|태국입고|한국판매가|웹노출)\s*:/.test(segment))
+    .filter((segment) => !/^(사진|박스|태국입고|한국판매가|웹노출|특가|특가가격)\s*:/.test(segment))
     .filter((segment) => !segment.startsWith('http'))
     .join(' · ')
     .trim();
@@ -158,6 +159,9 @@ function mapRow(values: Record<string, string>, index: number): Product | null {
   const gradeRaw = (values[COLUMN.grade] ?? '').trim().toUpperCase();
   const grade = GRADES.includes(gradeRaw as Grade) ? (gradeRaw as Grade) : undefined;
   const thb = toNumber(values[COLUMN.priceThb]);
+  const specialPrice = noteSpecialPrice(note);
+  const hasSpecialPrice = specialPrice > 0;
+  const price = hasSpecialPrice && resolveCategory(type, note) === 'events' ? specialPrice : thb;
   const conditionRaw = toNumber(values[COLUMN.condition]);
   const conditionPercent = conditionRaw > 0 && conditionRaw <= 1 ? Math.round(conditionRaw * 100) : undefined;
   const id = (values[COLUMN.id] ?? '').trim() || `SHEET-${index + 1}`;
@@ -165,12 +169,13 @@ function mapRow(values: Record<string, string>, index: number): Product | null {
 
   return {
     id,
-    category: 'used',
+    category: resolveCategory(type, note),
     type,
     brand,
     name: { en: rawName, ko: rawName, th: rawName },
-    price: thb,
-    priceOnRequest: thb <= 0,
+    price,
+    originalPrice: price < thb ? thb : undefined,
+    priceOnRequest: price <= 0,
     headGrade: grade,
     flex: parseFlex(spec),
     spec: spec || '—',

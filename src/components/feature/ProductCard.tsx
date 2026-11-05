@@ -96,6 +96,15 @@ export default function ProductCard({ product }: { product: Product }) {
         </h3>
         <p className="mt-1 truncate text-[11px] text-foreground-500">{product.spec}</p>
 
+        {product.stock > 1 && (
+          <p className="mt-1.5">
+            <span className="inline-flex items-center gap-1 rounded-full bg-secondary-100 px-2 py-0.5 text-[10px] text-secondary-900">
+              <i className="ri-stack-line text-[11px]"></i>
+              {t('catalogue.stockCount', { count: product.stock })}
+            </span>
+          </p>
+        )}
+
         <div className="mt-auto flex items-end justify-between gap-2 pt-3">
           <div className="min-w-0">
             {hasPrice(product) ? (
