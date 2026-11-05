@@ -77,6 +77,14 @@ export function productsOf(category?: CategoryKey): Product[] {
   return category ? products.filter((p) => p.category === category) : [...products];
 }
 
+/**
+ * 시트의 “웹노출”이 N 인 행은 관리자 화면에서만 다루고, 홈페이지에는 내보내지 않습니다.
+ * mock 상품처럼 visible 값이 없는 경우는 노출로 봅니다.
+ */
+export function visibleOnly(list: Product[]): Product[] {
+  return list.filter((product) => product.visible !== false);
+}
+
 export function brandsOf(list: Product[]): string[] {
   return Array.from(new Set(list.map((p) => p.brand))).sort();
 }

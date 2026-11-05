@@ -18,6 +18,7 @@ import {
   productsOf,
   totalPages,
   typesOf,
+  visibleOnly,
   type FilterState,
 } from '@/utils/products';
 import { groupProducts } from '@/utils/grouping';
@@ -47,8 +48,9 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
 
   const base = useMemo(() => {
     if (hasSheet) {
-      const list = category ? sheetItems.filter((item) => item.category === category) : sheetItems;
-      return groupProducts(list);
+      const list = visibleOnly(sheetItems);
+      const scoped = category ? list.filter((item) => item.category === category) : list;
+      return groupProducts(scoped);
     }
     return groupProducts(productsOf(category));
   }, [hasSheet, sheetItems, category]);

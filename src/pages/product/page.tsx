@@ -7,7 +7,7 @@ import ProductCard from '@/components/feature/ProductCard';
 import { products } from '@/mocks/products';
 import { useCatalogue } from '@/hooks/useCatalogue';
 import { fallbackImage } from '@/services/catalogue';
-import { categoryRoute, discountPercent, hasPrice, localizedName } from '@/utils/products';
+import { categoryRoute, discountPercent, hasPrice, localizedName, visibleOnly } from '@/utils/products';
 import { groupProducts } from '@/utils/grouping';
 import { lineChannel } from '@/config/channels';
 
@@ -18,7 +18,8 @@ export default function ProductDetailPage() {
 
   const demo = products.find((p) => p.id === id);
   const { items, loading, error, reload } = useCatalogue({ enabled: !demo });
-  const product = demo ?? items.find((p) => p.id === id);
+  const shopItems = useMemo(() => visibleOnly(items), [items]);
+  const product = demo ?? shopItems.find((p) => p.id === id);
 
   const [activePhoto, setActivePhoto] = useState(0);
 
@@ -37,17 +38,17 @@ export default function ProductDetailPage() {
     if (demo) {
       return groupProducts(products.filter((p) => p.category === product.category && p.id !== product.id)).slice(0, 5);
     }
-    return groupProducts(items.filter((p) => p.type === product.type && p.id !== product.id)).slice(0, 5);
-  }, [product, demo, items]);
+    return groupProducts(shopItems.filter((p) => p.type === product.type && p.id !== product.id)).slice(0, 5);
+  }, [product, demo, shopItems]);
 
   const stockTotal = useMemo(() => {
     if (!product) return 1;
-    const source = demo ? products : items;
+    const source = demo ? products : shopItems;
     const group = groupProducts(source).find(
       (item) => item.id === product.id || item.groupedIds?.includes(product.id),
     );
     return group?.stock ?? product.stock;
-  }, [product, demo, items]);
+  }, [product, demo, shopItems]);
 
   if (!product) {
     return (

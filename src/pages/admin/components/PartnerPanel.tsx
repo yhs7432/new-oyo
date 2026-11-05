@@ -41,10 +41,10 @@ export default function PartnerPanel({ items, loading, error, onRetry }: Props) 
       ),
     [items],
   );
-
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return items.filter((product) => {
+      if (product.visible === false) return false;
       if (type !== 'all' && product.type !== type) return false;
       if (status !== 'all' && (product.stockStatus ?? '상태 없음') !== status) return false;
       if (!keyword) return true;
@@ -92,7 +92,7 @@ export default function PartnerPanel({ items, loading, error, onRetry }: Props) 
 
       <div className="mt-5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {[
-          { label: '전체 상품', value: items.length.toLocaleString('en-US'), icon: 'ri-archive-2-line' },
+          { label: '전체 상품', value: items.filter((item) => item.visible !== false).length.toLocaleString('en-US'), icon: 'ri-archive-2-line' },
           { label: '검색 결과', value: filtered.length.toLocaleString('en-US'), icon: 'ri-search-line' },
           { label: '판매 가능', value: available.toLocaleString('en-US'), icon: 'ri-checkbox-circle-line' },
           {

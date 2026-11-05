@@ -30,6 +30,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all');
   const [status, setStatus] = useState('all');
+  const [exposure, setExposure] = useState('all');
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -54,6 +55,20 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
     if (result.ok) onRetry();
   };
 
+  const toggleVisible = async (product: Product) => {
+    const next = product.visible === false ? 'Y' : 'N';
+    setBusyId(product.id);
+    setNotice('');
+    const result = await updateSheetRows([{ id: product.id, fields: { 웹노출: next } }]);
+    setBusyId(null);
+    setNotice(
+      result.ok
+        ? `${product.id} · ${next === 'Y' ? '홈페이지에 노출했습니다.' : '홈페이지에서 숨겼습니다.'} ${result.message}`
+        : result.message,
+    );
+    if (result.ok) onRetry();
+  };
+
   const statusOptions = useMemo(
     () =>
       Array.from(new Set(items.map((item) => item.stockStatus ?? '상태 없음'))).filter(
@@ -67,13 +82,15 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
     return items.filter((product) => {
       if (type !== 'all' && product.type !== type) return false;
       if (status !== 'all' && (product.stockStatus ?? '상태 없음') !== status) return false;
+      if (exposure === 'shown' && product.visible === false) return false;
+      if (exposure === 'hidden' && product.visible !== false) return false;
       if (!keyword) return true;
       return [product.id, product.name.en, product.brand, product.spec]
         .join(' ')
         .toLowerCase()
         .includes(keyword);
     });
-  }, [items, query, type, status]);
+  }, [items, query, type, status, exposure]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -82,7 +99,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
 
   useEffect(() => {
     setPage(1);
-  }, [query, type, status, pageSize]);
+  }, [query, type, status, exposure, pageSize]);
 
   const pageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -166,6 +183,17 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                 {option}
               </option>
             ))}
+          </select>
+
+          <select
+            value={exposure}
+            onChange={(event) => setExposure(event.target.value)}
+            aria-label="웹 노출"
+            className="w-full box-border cursor-pointer rounded-md border border-background-300 bg-background-100 px-3 py-2 text-sm text-foreground-900 outline-none focus:border-primary-500 lg:w-36"
+          >
+            <option value="all">전체 노출</option>
+            <option value="shown">홈페이지 노출</option>
+            <option value="hidden">숨김</option>
           </select>
 
           <select
@@ -278,6 +306,11 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                             >
                               {CATEGORY_LABEL[product.category]}
                             </span>
+                            {product.visible === false && (
+                              <span className="rounded-full bg-foreground-200 px-1.5 py-0.5 text-[9.5px] text-foreground-700">
+                                웹 숨김
+                              </span>
+                            )}
                             <span>
                               {product.brand} · {product.id}
                             </span>
@@ -312,6 +345,26 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                           className="cursor-pointer whitespace-nowrap rounded border border-background-300 px-2 py-1 text-[11px] text-foreground-800 transition-colors hover:border-foreground-400"
                         >
                           수정·저장
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => void toggleVisible(product)}
+                          disabled={busyId === product.id || !isWriterReady()}
+                          title={
+                            isWriterReady()
+                              ? product.visible === false
+                                ? '홈페이지에 노출합니다'
+                                : '홈페이지에서 숨깁니다'
+                              : '시트 쓰기 연결 후 사용할 수 있습니다'
+                          }
+                          className="cursor-pointer whitespace-nowrap rounded border border-background-300 px-2 py-1 text-[11px] text-foreground-800 transition-colors hover:border-foreground-400 disabled:cursor-not-allowed disabled:opacity-40"
+                        >
+                          <i
+                            className={`mr-1 ${
+                              product.visible === false ? 'ri-eye-line' : 'ri-eye-off-line'
+                            }`}
+                          ></i>
+                          {product.visible === false ? '노출' : '숨김'}
                         </button>
                         <Link
                           to={`/products/${product.id}`}

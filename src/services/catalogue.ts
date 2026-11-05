@@ -185,6 +185,7 @@ function mapRow(values: Record<string, string>, index: number): Product | null {
     images: photos,
     addedAt: (values[COLUMN.registered] ?? '').trim(),
     conditionPercent,
+    visible: (values[COLUMN.visible] ?? '').trim().toUpperCase() === 'Y',
     stockStatus: (values[COLUMN.stockStatus] ?? '').trim() || undefined,
     headCoverIncluded: (values[COLUMN.headCover] ?? '').trim() === '포함',
     description: cleanDescription(note) || undefined,
@@ -205,8 +206,6 @@ export function mapSheetToProducts(csv: string): Product[] {
     header.forEach((key, columnIndex) => {
       record[key] = cells[columnIndex] ?? '';
     });
-
-    if ((record[COLUMN.visible] ?? '').trim().toUpperCase() !== 'Y') continue;
 
     const product = mapRow(record, i - 1);
     if (product) products.push(product);
@@ -240,7 +239,7 @@ export async function fetchCatalogue(force = false): Promise<Product[]> {
     const text = await response.text();
     const items = mapSheetToProducts(text);
     if (items.length === 0) {
-      throw new Error('Sheet returned no visible products');
+      throw new Error('Sheet returned no products');
     }
     cache = items;
     return items;
