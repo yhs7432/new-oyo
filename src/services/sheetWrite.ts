@@ -192,6 +192,15 @@ export function createSheetRow(
   return send({ action: 'create', values });
 }
 
+export function deleteSheetRows(
+  rows: { id: string; name?: string }[],
+): Promise<SheetWriteResult> {
+  return send({
+    action: 'delete',
+    rows: rows.map((row) => ({ id: row.id, name: row.name ?? '' })),
+  });
+}
+
 export function appendSheetLog(
   entry: Record<string, string | number>,
 ): Promise<SheetWriteResult> {

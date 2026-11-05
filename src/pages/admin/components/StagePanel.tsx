@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import type { Product } from '@/types/product';
 import { SHEET_EDIT_URL } from '@/config/admin';
 import { formatThb, statusClass } from '@/pages/admin/utils';
+import SettlementSection from '@/pages/admin/components/SettlementSection';
 
 export type StageKey = 'register' | 'dispatch' | 'receive' | 'sale' | 'audit' | 'history';
 
@@ -136,6 +137,20 @@ export default function StagePanel({ stage, items, loading }: Props) {
           박스·운송장 같은 세부 메모는 시트에서 직접 적어 주세요.
         </p>
       </div>
+
+      {stage === 'sale' && (
+        <section className="mt-5">
+          <div className="mb-2 flex flex-wrap items-end justify-between gap-2">
+            <h2 className="font-heading text-base text-foreground-950">
+              판매 완료 정산
+              <span className="ml-2 text-[11px] font-normal text-foreground-500">
+                기간을 정해 매출·순수익·마진을 확인합니다
+              </span>
+            </h2>
+          </div>
+          <SettlementSection items={items} />
+        </section>
+      )}
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <div className="rounded-lg border border-background-200 bg-background-50">

@@ -185,6 +185,22 @@ export default function DashboardPanel({ items, loading, error, onRetry, onTab }
         </div>
       </div>
 
+      <div className="mt-3 flex flex-col gap-2 rounded-lg border border-background-200 bg-background-50 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="flex items-center gap-2 text-[11.5px] leading-relaxed text-foreground-600">
+          <i className="ri-calculator-line text-[14px] text-foreground-500"></i>
+          판매 완료 정산과 월별 추이는{' '}
+          <strong className="font-medium text-foreground-900">판매·출고</strong> 화면에서
+          기간을 골라 확인할 수 있습니다.
+        </p>
+        <button
+          type="button"
+          onClick={() => onTab('sale')}
+          className="cursor-pointer whitespace-nowrap rounded-md border border-background-300 bg-background-50 px-3 py-1.5 text-[11.5px] text-foreground-700 transition-colors hover:border-foreground-400 hover:text-foreground-950"
+        >
+          정산 보러 가기 ›
+        </button>
+      </div>
+
       <div className="mt-6 rounded-lg border border-background-200 bg-background-50">
         <div className="flex items-center justify-between border-b border-background-200 px-4 py-3">
           <h2 className="text-[12.5px] font-medium text-foreground-900">최근 등록 상품</h2>

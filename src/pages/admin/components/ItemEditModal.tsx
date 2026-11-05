@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Product } from '@/types/product';
-import { updateSheetRows } from '@/services/sheetWrite';
+import { deleteSheetRows, updateSheetRows } from '@/services/sheetWrite';
 import {
   GRADE_OPTIONS,
   STOCK_STATUS_OPTIONS,
@@ -13,8 +13,12 @@ import {
   statusClass,
 } from '@/pages/admin/utils';
 import {
+  FEE_RATE,
+  FEE_RATE_LEGACY,
+  SALE_DATE,
   SPECIAL_FLAG,
   SPECIAL_PRICE,
+  VAT_RATE,
   isClubType,
   isSpecial,
   readNoteValue,
@@ -30,15 +34,36 @@ interface Props {
 
 type SaveState = 'idle' | 'saving' | 'done' | 'error';
 
+/** `2026.11.5` / `2026/11/05` / `2026-11-05` → `2026-11-05` for a date input. */
+function toDateInput(value: string): string {
+  const match = value.match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+  if (!match) return '';
+  return `${match[1]}-${match[2].padStart(2, '0')}-${match[3].padStart(2, '0')}`;
+}
+
+function todayInput(): string {
+  const now = new Date();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${now.getFullYear()}-${month}-${day}`;
+}
+
 export default function ItemEditModal({ product, rate, onClose, onSaved }: Props) {
   const raw = useMemo(() => product.raw ?? {}, [product.raw]);
   const originalNote = raw['비고'] ?? '';
+  const initialVat = readNoteValue(originalNote, VAT_RATE).replace(/[^0-9.]/g, '');
+  const initialFee = (readNoteValue(originalNote, FEE_RATE) || readNoteValue(originalNote, FEE_RATE_LEGACY))
+    .replace(/[^0-9]/g, '');
+  const initialSaleDate = toDateInput(readNoteValue(originalNote, SALE_DATE));
 
   const [brand, setBrand] = useState(raw['브랜드'] ?? product.brand);
   const [name, setName] = useState(raw['상품명'] ?? product.name.en);
   const [spec, setSpec] = useState(raw['사양'] ?? product.spec);
   const [price, setPrice] = useState(raw['판매가격(THB)'] ?? String(product.price || ''));
   const [cost, setCost] = useState(raw['한국원가(KRW)'] ?? '');
+  const [vat, setVat] = useState(initialVat);
+  const [fee, setFee] = useState(initialFee);
+  const [saleDate, setSaleDate] = useState(initialSaleDate);
   const [grade, setGrade] = useState(raw['중고등급'] ?? product.headGrade ?? '');
   const [condition, setCondition] = useState(
     product.conditionPercent ? String(product.conditionPercent) : '',
@@ -60,6 +85,9 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
 
   const [state, setState] = useState<SaveState>('idle');
   const [message, setMessage] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
 
   const photoUrls = photoText
     .split('\n')
@@ -73,12 +101,27 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     special && parsedSpecialPrice > 0 && parsedPrice > parsedSpecialPrice
       ? Math.round(((parsedPrice - parsedSpecialPrice) / parsedPrice) * 100)
       : 0;
+
+  const vatRateValue = Math.min(100, Number(vat) || 0);
+  const feeBahtValue = Number(String(fee).replace(/[^0-9.]/g, '')) || 0;
+  const costKrw = Number(String(cost).replace(/[^0-9]/g, '')) || 0;
+  const costThb = rate > 0 ? costKrw / rate : 0;
+  const vatAmount = (parsedPrice * vatRateValue) / 100;
+  const feeAmount = feeBahtValue;
+  const feeSharePercent =
+    parsedPrice > 0 ? Math.round((feeBahtValue / parsedPrice) * 1000) / 10 : 0;
+  const netThb = parsedPrice - costThb - vatAmount - feeAmount;
+  const marginPercent = parsedPrice > 0 ? Math.round((netThb / parsedPrice) * 100) : 0;
+  const isSold = (stockStatus ?? '').includes('완료');
   const dirty =
     brand !== (raw['브랜드'] ?? product.brand) ||
     name !== (raw['상품명'] ?? product.name.en) ||
     spec !== (raw['사양'] ?? product.spec) ||
     price !== (raw['판매가격(THB)'] ?? String(product.price || '')) ||
     cost !== (raw['한국원가(KRW)'] ?? '') ||
+    vat !== initialVat ||
+    fee !== initialFee ||
+    saleDate !== initialSaleDate ||
     grade !== (raw['중고등급'] ?? product.headGrade ?? '') ||
     condition !== (product.conditionPercent ? String(product.conditionPercent) : '') ||
     stockStatus !== (raw['재고상태'] ?? product.stockStatus ?? '판매 가능') ||
@@ -96,10 +139,26 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
 
     const nextNote = mergeNotePhotos(originalNote, photoUrls);
     const noteWithSpecial = writeNoteValue(nextNote, SPECIAL_FLAG, special && isClub ? 'Y' : null);
-    const finalNote = writeNoteValue(
+    const noteWithPrice = writeNoteValue(
       noteWithSpecial,
       SPECIAL_PRICE,
       special && isClub && parsedSpecialPrice > 0 ? String(parsedSpecialPrice) : null,
+    );
+    const noteWithVat = writeNoteValue(
+      noteWithPrice,
+      VAT_RATE,
+      vatRateValue > 0 ? String(vatRateValue) : null,
+    );
+    const noteWithoutLegacyFee = writeNoteValue(noteWithVat, FEE_RATE_LEGACY, null);
+    const noteWithDate = writeNoteValue(
+      noteWithoutLegacyFee,
+      SALE_DATE,
+      saleDate ? saleDate : null,
+    );
+    const finalNote = writeNoteValue(
+      noteWithDate,
+      FEE_RATE,
+      feeBahtValue > 0 ? String(feeBahtValue) : null,
     );
     const fields: Record<string, string | number> = {
       브랜드: brand.trim(),
@@ -121,6 +180,21 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     setMessage(result.message);
     setState(result.ok ? 'done' : 'error');
     if (result.ok) onSaved();
+  };
+
+  const remove = async () => {
+    setDeleting(true);
+    setDeleteError('');
+
+    const result = await deleteSheetRows([{ id: product.id, name: product.name.en }]);
+    setDeleting(false);
+
+    if (!result.ok) {
+      setDeleteError(result.message || '삭제하지 못했습니다.');
+      return;
+    }
+    onSaved();
+    onClose();
   };
 
   const inputClass =
@@ -211,6 +285,35 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
               />
             </label>
             <label className="block min-w-0">
+              <span className={labelClass}>VAT (%)</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={vat}
+                onChange={(event) => setVat(event.target.value.replace(/[^0-9.]/g, ''))}
+                placeholder="예: 7"
+                className={`${inputClass} text-right`}
+              />
+            </label>
+            <label className="block min-w-0">
+              <span className={labelClass}>웹 수수료 (THB)</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={fee}
+                onChange={(event) => setFee(event.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="예: 250"
+                className={`${inputClass} text-right`}
+              />
+            </label>
+            <div className="flex flex-col justify-end rounded-md bg-background-100/70 px-3 py-2 text-[10.5px] leading-relaxed text-foreground-600 sm:col-span-2">
+              <span>
+                <i className="ri-information-line mr-1"></i>
+                VAT는 판매가의 %로, 웹 수수료는 실제로 내는 태국 바트(฿) 금액으로 넣어 주세요. 비워
+                두면 0으로 계산합니다.
+              </span>
+            </div>
+            <label className="block min-w-0">
               <span className={labelClass}>중고등급</span>
               <select value={grade} onChange={(event) => setGrade(event.target.value)} className={`${inputClass} cursor-pointer`}>
                 <option value="">등급 없음</option>
@@ -236,7 +339,11 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
               <span className={labelClass}>재고상태</span>
               <select
                 value={stockStatus}
-                onChange={(event) => setStockStatus(event.target.value)}
+                onChange={(event) => {
+                  const next = event.target.value;
+                  setStockStatus(next);
+                  if (next.includes('완료') && !saleDate) setSaleDate(todayInput());
+                }}
                 className={`${inputClass} cursor-pointer`}
               >
                 {STOCK_STATUS_OPTIONS.map((option) => (
@@ -248,6 +355,18 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                   <option value={stockStatus}>{stockStatus}</option>
                 )}
               </select>
+            </label>
+            <label className="block min-w-0">
+              <span className={labelClass}>판매일</span>
+              <input
+                type="date"
+                value={saleDate}
+                onChange={(event) => setSaleDate(event.target.value)}
+                className={`${inputClass} text-right`}
+              />
+              <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
+                판매 완료로 바꾸면 오늘 날짜가 자동 입력됩니다.
+              </span>
             </label>
             <label className="block min-w-0">
               <span className={labelClass}>웹노출</span>
@@ -357,27 +476,102 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             )}
           </div>
 
-          <dl className="mt-4 rounded-md border border-background-200 bg-background-100/60 px-3.5 py-3 text-[12px]">
-            <div className="flex items-center justify-between gap-2">
-              <dt className="text-foreground-600">노출 분류</dt>
-              <dd className="text-foreground-900">
+          <div className="mt-4 rounded-md border border-background-200 bg-background-100/60 px-3.5 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-[12px] font-medium text-foreground-900">
+                <i className="ri-calculator-line text-[13px] text-foreground-500"></i>
+                정산 계산
+              </p>
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] ${
+                  isSold
+                    ? 'bg-accent-100 text-accent-900'
+                    : 'bg-secondary-100 text-secondary-900'
+                }`}
+              >
+                {isSold ? '판매 완료 기준' : '판매 시 자동 계산'}
+              </span>
+            </div>
+
+            <dl className="mt-2.5 flex flex-col gap-1.5 text-[12px]">
+              <div className="flex items-center justify-between gap-2">
+                <dt className="text-foreground-600">판매가</dt>
+                <dd className="text-foreground-900">
+                  {formatThb(parsedPrice)}
+                  <span className="ml-1 text-[10.5px] text-foreground-500">
+                    / {formatKrw(parsedPrice * rate)}
+                  </span>
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <dt className="text-foreground-600">원가</dt>
+                <dd className="text-foreground-900">
+                  − {formatThb(costThb)}
+                  <span className="ml-1 text-[10.5px] text-foreground-500">
+                    / {formatKrw(costKrw)}
+                  </span>
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <dt className="text-foreground-600">VAT ({vatRateValue}%)</dt>
+                <dd className={vatRateValue > 0 ? 'text-foreground-900' : 'text-foreground-400'}>
+                  {vatRateValue > 0 ? `− ${formatThb(vatAmount)}` : '없음'}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-2">
+                <dt className="text-foreground-600">
+                  웹 수수료
+                  {feeBahtValue > 0 && (
+                    <span className="ml-1 text-[10.5px] text-foreground-500">
+                      (판매가의 {feeSharePercent}%)
+                    </span>
+                  )}
+                </dt>
+                <dd className={feeBahtValue > 0 ? 'text-foreground-900' : 'text-foreground-400'}>
+                  {feeBahtValue > 0 ? `− ${formatThb(feeBahtValue)}` : '없음'}
+                </dd>
+              </div>
+            </dl>
+
+            <div className="mt-2.5 flex flex-wrap items-end justify-between gap-2 border-t border-background-300/60 pt-2.5">
+              <span className="text-[12px] font-medium text-foreground-900">예상 순수익</span>
+              <span className="text-right">
+                <strong
+                  className={`font-heading text-[16px] font-normal ${
+                    netThb >= 0 ? 'text-secondary-900' : 'text-accent-800'
+                  }`}
+                >
+                  {formatThb(netThb)}
+                </strong>
+                <span className="ml-1.5 text-[10.5px] text-foreground-500">
+                  {formatKrw(netThb * rate)} · 마진 {marginPercent}%
+                </span>
+              </span>
+            </div>
+
+            <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-background-300/60 pt-2 text-[12px]">
+              <span className="text-foreground-600">노출 분류</span>
+              <span className="text-foreground-900">
                 {nextCategory === 'events' ? '특가 상품' : nextCategory === 'used' ? '중고 상품' : '액세서리'}
-              </dd>
+              </span>
             </div>
-            <div className="flex items-center justify-between gap-2">
-              <dt className="text-foreground-600">시트에 저장될 판매가</dt>
-              <dd className="text-foreground-900">
-                {formatThb(parsedPrice)}{' '}
-                <span className="text-foreground-500">/ {formatKrw(parsedPrice * rate)}</span>
-              </dd>
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[12px]">
+              <span className="text-foreground-600">판매일</span>
+              <span className={saleDate ? 'text-foreground-900' : 'text-foreground-400'}>
+                {saleDate || '미기록'}
+              </span>
             </div>
-            <div className="mt-1.5 flex items-center justify-between gap-2">
-              <dt className="text-foreground-600">웹노출</dt>
-              <dd className="text-foreground-900">
+            <div className="mt-1.5 flex items-center justify-between gap-2 text-[12px]">
+              <span className="text-foreground-600">웹노출</span>
+              <span className="text-foreground-900">
                 {visible === 'Y' ? '홈페이지에 표시됩니다' : '홈페이지에서 숨겨집니다'}
-              </dd>
+              </span>
             </div>
-          </dl>
+            <p className="mt-2 text-[10.5px] leading-relaxed text-foreground-500">
+              순수익 = 판매가 − 원가(THB 환산) − VAT(판매가의 %) − 웹 수수료(바트 직접 입력). 금액을
+              바꾸면 바로 다시 계산됩니다.
+            </p>
+          </div>
 
           {state !== 'idle' && (
             <p
@@ -393,22 +587,76 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
           )}
         </div>
 
-        <div className="sticky bottom-0 flex items-center justify-end gap-2 border-t border-background-200 bg-background-50 px-5 py-3.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="cursor-pointer whitespace-nowrap rounded-md border border-background-300 px-4 py-2 text-[12px] text-foreground-700 transition-colors hover:border-foreground-400"
-          >
-            닫기
-          </button>
-          <button
-            type="button"
-            onClick={save}
-            disabled={state === 'saving' || !dirty}
-            className="cursor-pointer whitespace-nowrap rounded-md bg-foreground-950 px-4 py-2 text-[12px] font-medium text-background-50 transition-colors hover:bg-foreground-800 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            {state === 'saving' ? '저장 중…' : '시트에 저장'}
-          </button>
+        <div className="sticky bottom-0 border-t border-background-200 bg-background-50 px-5 py-3.5">
+          {confirmDelete ? (
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 text-[11.5px] leading-relaxed text-foreground-700">
+                <p className="font-medium text-foreground-900">
+                  <i className="ri-error-warning-line mr-1 text-accent-600"></i>
+                  {product.id} 시트 행을 완전히 삭제할까요?
+                </p>
+                <p className="mt-0.5 text-foreground-600">삭제하면 되돌릴 수 없습니다.</p>
+                {deleteError && (
+                  <p className="mt-1 text-accent-800">
+                    <i className="ri-error-warning-line mr-1"></i>
+                    {deleteError}
+                  </p>
+                )}
+              </div>
+              <div className="flex shrink-0 items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setConfirmDelete(false);
+                    setDeleteError('');
+                  }}
+                  disabled={deleting}
+                  className="cursor-pointer whitespace-nowrap rounded-md border border-background-300 px-4 py-2 text-[12px] text-foreground-700 transition-colors hover:border-foreground-400 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  취소
+                </button>
+                <button
+                  type="button"
+                  onClick={remove}
+                  disabled={deleting}
+                  className="cursor-pointer whitespace-nowrap rounded-md bg-accent-600 px-4 py-2 text-[12px] font-medium text-background-50 transition-colors hover:bg-accent-700 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {deleting ? '삭제하는 중…' : '완전히 삭제'}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDelete(true);
+                  setDeleteError('');
+                }}
+                className="inline-flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-accent-300 bg-background-50 px-3.5 py-2 text-[12px] text-accent-800 transition-colors hover:bg-accent-50"
+              >
+                <i className="ri-delete-bin-line"></i>
+                상품 삭제
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="cursor-pointer whitespace-nowrap rounded-md border border-background-300 px-4 py-2 text-[12px] text-foreground-700 transition-colors hover:border-foreground-400"
+                >
+                  닫기
+                </button>
+                <button
+                  type="button"
+                  onClick={save}
+                  disabled={state === 'saving' || !dirty}
+                  className="cursor-pointer whitespace-nowrap rounded-md bg-foreground-950 px-4 py-2 text-[12px] font-medium text-background-50 transition-colors hover:bg-foreground-800 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  {state === 'saving' ? '저장 중…' : '시트에 저장'}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>

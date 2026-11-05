@@ -89,6 +89,7 @@ function doPost(e) {
     var result;
     if (action === 'update') result = updateRows_(body.rows || []);
     else if (action === 'create') result = createRow_(body.values || {});
+    else if (action === 'delete') result = deleteRows_(body.rows || []);
     else if (action === 'log') result = writeLog_(body.entry || {});
     else throw new Error('지원하지 않는 요청입니다.');
 
@@ -159,6 +160,56 @@ function createRow_(values) {
   sheet.appendRow(row);
   SpreadsheetApp.flush();
   return { ok: true, message: id + ' 상품을 등록했습니다.' };
+}
+
+function deleteRows_(rows) {
+  var sheet = mainSheet_();
+  var map = headerMap_(sheet);
+  var idCol = map['재고번호'];
+  if (idCol === undefined) throw new Error('시트에 재고번호 열이 없습니다.');
+
+  var index = indexById_(sheet, idCol);
+  var targets = [];
+  var removed = [];
+  var missing = [];
+
+  for (var r = 0; r < rows.length; r += 1) {
+    var row = rows[r] || {};
+    var key = String(row.id || '').trim();
+    var target = index[key];
+    if (!target) {
+      missing.push(key);
+      continue;
+    }
+    targets.push({ row: target, id: key, name: String(row.name || '') });
+  }
+
+  // 아래쪽 행부터 지워야 위쪽 행 번호가 밀리지 않습니다.
+  targets.sort(function (a, b) { return b.row - a.row; });
+  for (var t = 0; t < targets.length; t += 1) {
+    sheet.deleteRow(targets[t].row);
+    removed.push(targets[t]);
+  }
+
+  SpreadsheetApp.flush();
+
+  for (var l = 0; l < removed.length; l += 1) {
+    writeLog_({
+      '구분': '삭제',
+      '재고번호': removed[l].id,
+      '상품명': removed[l].name,
+      '이전값': '시트 행 삭제',
+      '새값': '',
+      '메모': '관리자 화면에서 삭제'
+    });
+  }
+
+  return {
+    ok: true,
+    deleted: removed.length,
+    missing: missing,
+    message: removed.length + '건을 시트에서 삭제했습니다.'
+  };
 }
 
 function writeLog_(entry) {

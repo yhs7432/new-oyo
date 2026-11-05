@@ -10,6 +10,17 @@ import type { CategoryKey, ProductType } from '@/types/product';
  */
 export const SPECIAL_FLAG = '특가';
 export const SPECIAL_PRICE = '특가가격';
+/**
+ * Per-product payment costs the shop absorbs, stored in 비고:
+ *   VAT:7        → 7% of 판매가
+ *   웹수수료:250  → 250 THB fixed amount
+ */
+export const VAT_RATE = 'VAT';
+export const FEE_RATE = '웹수수료';
+/** Older rows may still carry the legacy key name; read it as a fallback. */
+export const FEE_RATE_LEGACY = '바트 직접 입력';
+/** Sale date, stored in 비고 as `판매일:2026-11-05`. */
+export const SALE_DATE = '판매일';
 
 /** Club types — everything else (bag, accessories) belongs to 액세서리. */
 const CLUB_TYPES: ProductType[] = ['driver', 'wood', 'iron', 'utility', 'wedge', 'putter'];
@@ -57,6 +68,25 @@ export function noteSpecialPrice(note: string): number {
   if (!raw) return 0;
   const value = Number(raw);
   return Number.isFinite(value) && value > 0 ? value : 0;
+}
+
+/** Percentage rate (0~100) stored in a note segment, e.g. `VAT:7`. */
+export function noteRate(note: string, key: string): number {
+  const raw = readNoteValue(note, key).replace(/[^0-9.]/g, '');
+  if (!raw) return 0;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return Math.min(100, value);
+}
+
+/** Fixed amount in THB stored in a note segment, e.g. `웹수수료:250`. */
+export function noteAmount(note: string, key: string, legacyKey?: string): number {
+  const source = readNoteValue(note, key) || (legacyKey ? readNoteValue(note, legacyKey) : '');
+  const raw = source.replace(/[^0-9.]/g, '');
+  if (!raw) return 0;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return value;
 }
 
 /**
