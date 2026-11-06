@@ -82,6 +82,19 @@ export default function SheetPanel({ items, loading, error, onRetry }: Props) {
         </button>
       </div>
 
+      <div className="mt-5 rounded-lg border border-secondary-300/70 bg-secondary-50 px-4 py-3.5">
+        <p className="flex flex-wrap items-center gap-1.5 text-[12px] font-medium text-secondary-900">
+          <i className="ri-price-tag-3-line"></i>
+          ‘판매 완료’ 탭이 자동으로 만들어집니다
+        </p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-secondary-800">
+          판매·출고 화면에서 “판매 완료”를 누르면 같은 스프레드시트 안에 <strong className="font-medium">판매 완료</strong> 탭이
+          생기고, 판매일·재고번호·상품명·판매가·원가·VAT·웹 수수료·순수익·판매채널·담당자·메모가 한 줄씩
+          쌓입니다. 같은 재고번호를 다시 저장하면 새 줄을 만들지 않고 그 줄만 갱신합니다. 메인 시트의 행은
+          지우지 않으므로 정산 숫자는 그대로 유지됩니다.
+        </p>
+      </div>
+
       <div className="mt-5 overflow-x-auto rounded-lg border border-background-200 bg-background-50">
         <table className="w-full min-w-[620px] border-collapse text-left">
           <thead>

@@ -62,7 +62,7 @@ export default function AdminPage() {
       case 'sale':
       case 'audit':
       case 'history':
-        return <StagePanel stage={activeTab} items={items} loading={catalogueLoading} />;
+        return <StagePanel stage={activeTab} items={items} loading={catalogueLoading} identity={identity} />;
       case 'stock':
         return (
           <InventoryPanel

@@ -207,4 +207,11 @@ export function appendSheetLog(
   return send({ action: 'log', entry });
 }
 
+/** Sends one sold product to the '판매 완료' archive tab of the spreadsheet. */
+export function archiveSaleEntry(
+  entry: Record<string, string | number>,
+): Promise<SheetWriteResult> {
+  return send({ action: 'archive', entry });
+}
+
 export const SHEET_CONNECTION_STORAGE_KEY = SCRIPT_URL_KEY;

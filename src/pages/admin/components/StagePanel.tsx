@@ -1,8 +1,11 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import type { Product } from '@/types/product';
+import type { AdminIdentity } from '@/config/admin';
 import { SHEET_EDIT_URL } from '@/config/admin';
 import { formatThb, statusClass } from '@/pages/admin/utils';
 import SettlementSection from '@/pages/admin/components/SettlementSection';
+import SaleCompleteModal from '@/pages/admin/components/SaleCompleteModal';
+import { isSoldItem } from '@/utils/settlement';
 
 export type StageKey = 'register' | 'dispatch' | 'receive' | 'sale' | 'audit' | 'history';
 
@@ -10,6 +13,7 @@ interface Props {
   stage: StageKey;
   items: Product[];
   loading: boolean;
+  identity?: AdminIdentity;
 }
 
 const CONFIG: Record<
@@ -54,15 +58,15 @@ const CONFIG: Record<
   },
   sale: {
     title: '판매·출고',
-    desc: '판매된 상품의 판매가와 채널을 확인합니다.',
+    desc: '판매된 상품을 정리하는 화면입니다. 판매 완료로 저장하면 재고 목록에서 빠지고, 같은 내용이 시트의 ‘판매 완료’ 탭에 한 줄씩 기록됩니다.',
     steps: [
-      '판매 상품의 재고번호를 확인합니다.',
-      '판매가격과 판매일, 판매 채널을 기록합니다.',
-      '재고상태를 판매 완료로 변경합니다.',
-      '증빙이 필요하면 이력·증빙 화면에서 확인합니다.',
+      '판매할 상품을 찾아 “판매 완료”를 누릅니다.',
+      '실제 판매가·VAT·수수료를 확인하고 저장합니다.',
+      '재고상태가 판매 완료로 바뀌고 홈페이지에서 숨겨집니다.',
+      '같은 내용이 시트 ‘판매 완료’ 탭에 장부로 남습니다.',
     ],
-    listTitle: '판매 완료 상품',
-    empty: '판매 완료로 표시된 상품이 없습니다.',
+    listTitle: '판매 상품',
+    empty: '판매 대기 중인 상품이 없습니다.',
   },
   audit: {
     title: '재고실사',
@@ -80,35 +84,59 @@ const CONFIG: Record<
     title: '이력·증빙',
     desc: '출고·판매 이력과 증빙 자료를 확인합니다.',
     steps: [
-      '상품별 이력은 시트의 비고 칸에 날짜와 함께 남깁니다.',
+      '판매 이력은 시트의 ‘판매 완료’ 탭에 자동으로 쌓입니다.',
       '인보이스·운송장은 공유 드라이브에 보관합니다.',
       '필요한 서류는 시트 도구에서 내려받습니다.',
     ],
     listTitle: '판매 완료 상품',
-    empty: '아직 기록된 이력이 없습니다.',
+    empty: '아직 판매 완료로 기록된 상품이 없습니다.',
   },
 };
 
-export default function StagePanel({ stage, items, loading }: Props) {
+type SaleFilter = 'ready' | 'sold' | 'all';
+
+const LIST_LIMIT = 30;
+
+function matchesStage(item: Product, stage: StageKey): boolean {
+  const status = item.stockStatus ?? '';
+  if (stage === 'history') return isSoldItem(item);
+  if (stage === 'dispatch') return status.includes('출고');
+  if (stage === 'receive') return status.includes('입고');
+  if (stage === 'audit') return !item.priceOnRequest;
+  return true;
+}
+
+export default function StagePanel({ stage, items, loading, identity }: Props) {
   const config = CONFIG[stage];
+  const [saleFilter, setSaleFilter] = useState<SaleFilter>('ready');
+  const [selling, setSelling] = useState<Product | null>(null);
+  const [notice, setNotice] = useState('');
+
+  const soldCount = useMemo(() => items.filter(isSoldItem).length, [items]);
+  const readyCount = items.length - soldCount;
 
   const list = useMemo(() => {
     if (stage === 'register') {
-      return [...items]
-        .sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1))
-        .slice(0, 10);
+      return [...items].sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1)).slice(0, 10);
     }
-    if (stage === 'sale' || stage === 'history') {
-      return items.filter((item) => (item.stockStatus ?? '').includes('완료')).slice(0, 10);
+    if (stage === 'sale') {
+      const base =
+        saleFilter === 'sold'
+          ? items.filter(isSoldItem)
+          : saleFilter === 'all'
+            ? items
+            : items.filter((item) => !isSoldItem(item));
+      return base.slice(0, LIST_LIMIT);
     }
-    if (stage === 'dispatch') {
-      return items.filter((item) => (item.stockStatus ?? '').includes('출고')).slice(0, 10);
-    }
-    if (stage === 'receive') {
-      return items.filter((item) => (item.stockStatus ?? '').includes('입고')).slice(0, 10);
-    }
-    return items.filter((item) => !item.priceOnRequest).slice(0, 8);
-  }, [items, stage]);
+    return items.filter((item) => matchesStage(item, stage)).slice(0, 10);
+  }, [items, saleFilter, stage]);
+
+  const emptyText = (() => {
+    if (stage !== 'sale') return config.empty;
+    if (saleFilter === 'sold') return '아직 판매 완료로 기록된 상품이 없습니다.';
+    if (saleFilter === 'all') return '등록된 상품이 없습니다.';
+    return '판매 대기 중인 상품이 없습니다. 모두 정리되었습니다.';
+  })();
 
   return (
     <div>
@@ -133,10 +161,18 @@ export default function StagePanel({ stage, items, loading }: Props) {
       <div className="mt-5 rounded-lg border border-accent-300/70 bg-accent-50 px-4 py-3.5">
         <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-accent-900">
           <i className="ri-information-line mt-0.5 text-[14px]"></i>
-          이 단계의 상태 변경은 “현재 재고” 화면에서 상품을 열어 수정·저장하면 시트에 기록됩니다.
-          박스·운송장 같은 세부 메모는 시트에서 직접 적어 주세요.
+          {stage === 'sale'
+            ? '판매 완료로 저장하면 재고 목록에서는 숨겨지고, 판매 기록은 시트의 ‘판매 완료’ 탭에 자동으로 한 줄씩 남습니다. 잘못 입력했다면 같은 상품을 다시 열어 고칠 수 있습니다.'
+            : '이 단계의 상태 변경은 “현재 재고” 화면에서 상품을 열어 수정·저장하면 시트에 기록됩니다. 박스·운송장 같은 세부 메모는 시트에서 직접 적어 주세요.'}
         </p>
       </div>
+
+      {notice && (
+        <p className="mt-3 rounded-lg border border-secondary-300/70 bg-secondary-50 px-4 py-2.5 text-[11.5px] leading-relaxed text-secondary-900">
+          <i className="ri-checkbox-circle-line mr-1"></i>
+          {notice}
+        </p>
+      )}
 
       {stage === 'sale' && (
         <section className="mt-5">
@@ -154,50 +190,99 @@ export default function StagePanel({ stage, items, loading }: Props) {
 
       <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         <div className="rounded-lg border border-background-200 bg-background-50">
-          <div className="border-b border-background-200 px-4 py-3">
+          <div className="flex flex-col gap-2 border-b border-background-200 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="text-[12.5px] font-medium text-foreground-900">{config.listTitle}</h2>
+            {stage === 'sale' && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {[
+                  { key: 'ready' as SaleFilter, label: `판매 대기 ${readyCount}` },
+                  { key: 'sold' as SaleFilter, label: `판매 완료 ${soldCount}` },
+                  { key: 'all' as SaleFilter, label: '전체' },
+                ].map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setSaleFilter(option.key)}
+                    className={`cursor-pointer whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] transition-colors ${
+                      saleFilter === option.key
+                        ? 'bg-foreground-900 text-background-50'
+                        : 'border border-background-300 text-foreground-700 hover:border-foreground-400'
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {loading && <p className="px-4 py-6 text-[12px] text-foreground-600">불러오는 중…</p>}
 
           {!loading && list.length === 0 && (
             <p className="px-4 py-8 text-center text-[12px] leading-relaxed text-foreground-600">
-              {config.empty}
+              {emptyText}
             </p>
           )}
 
           {!loading &&
-            list.map((product) => (
-              <div
-                key={product.id}
-                className="flex items-center gap-3 border-b border-background-200/70 px-4 py-2.5 last:border-0"
-              >
-                <div className="h-11 w-9 shrink-0 overflow-hidden rounded bg-background-200">
-                  <img
-                    src={product.image}
-                    alt={product.name.en}
-                    title={product.name.en}
-                    className="h-full w-full object-cover object-top"
-                  />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-[12px] font-medium text-foreground-900">
-                    {product.name.en}
-                  </p>
-                  <p className="mt-0.5 truncate text-[10.5px] text-foreground-500">
-                    {product.id} · {product.brand} · {product.addedAt || '등록일 없음'}
-                  </p>
-                </div>
-                <span
-                  className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] ${statusClass(product.stockStatus)}`}
+            list.map((product) => {
+              const sold = isSoldItem(product);
+              return (
+                <div
+                  key={product.id}
+                  className="flex flex-wrap items-center gap-3 border-b border-background-200/70 px-4 py-2.5 last:border-0"
                 >
-                  {product.stockStatus ?? '상태 없음'}
-                </span>
-                <span className="hidden whitespace-nowrap text-[11.5px] text-foreground-800 sm:block">
-                  {product.priceOnRequest ? '가격 문의' : formatThb(product.price)}
-                </span>
-              </div>
-            ))}
+                  <div className="h-11 w-9 shrink-0 overflow-hidden rounded bg-background-200">
+                    <img
+                      src={product.image}
+                      alt={product.name.en}
+                      title={product.name.en}
+                      className="h-full w-full object-cover object-top"
+                    />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[12px] font-medium text-foreground-900">
+                      {product.name.en}
+                    </p>
+                    <p className="mt-0.5 truncate text-[10.5px] text-foreground-500">
+                      {product.id} · {product.brand} · {product.addedAt || '등록일 없음'}
+                    </p>
+                  </div>
+                  <span
+                    className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] ${statusClass(product.stockStatus)}`}
+                  >
+                    {product.stockStatus ?? '상태 없음'}
+                  </span>
+                  <span className="hidden whitespace-nowrap text-[11.5px] text-foreground-800 sm:block">
+                    {product.priceOnRequest ? '가격 문의' : formatThb(product.price)}
+                  </span>
+                  {stage === 'sale' && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setNotice('');
+                        setSelling(product);
+                      }}
+                      className={`inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded border px-2 py-1 text-[11px] transition-colors ${
+                        sold
+                          ? 'border-background-300 text-foreground-700 hover:border-foreground-400'
+                          : 'border-primary-400 bg-primary-100 text-primary-800 hover:bg-primary-200'
+                      }`}
+                    >
+                      <i className={sold ? 'ri-edit-line' : 'ri-check-double-line'}></i>
+                      {sold ? '기록 수정' : '판매 완료'}
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+
+          {!loading && stage === 'sale' && list.length >= LIST_LIMIT && (
+            <p className="border-t border-background-200 px-4 py-2.5 text-[10.5px] text-foreground-500">
+              최근 {LIST_LIMIT}건만 표시합니다. 전체 목록은 “현재 재고” 화면의 판매 완료 필터에서
+              확인할 수 있습니다.
+            </p>
+          )}
         </div>
 
         <div className="rounded-lg border border-background-200 bg-background-50 p-4">
@@ -217,6 +302,17 @@ export default function StagePanel({ stage, items, loading }: Props) {
           </p>
         </div>
       </div>
+
+      {selling && (
+        <SaleCompleteModal
+          product={selling}
+          staffName={identity?.name ?? ''}
+          onClose={() => setSelling(null)}
+          onCompleted={(message) => {
+            if (message) setNotice(message);
+          }}
+        />
+      )}
     </div>
   );
 }

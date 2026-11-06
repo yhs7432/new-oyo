@@ -12,7 +12,13 @@ export const APPS_SCRIPT_CODE = `/**
 var SHEET_ID = '1iIvop4UcnSs7U_WJjvb2qLKeRWH9BbA9fb0FebsVgdw';
 var SHEET_NAME = '';            // 비워 두면 첫 번째 시트를 사용합니다.
 var LOG_NAME = '관리 로그';      // 처리 이력이 쌓이는 시트 이름
+var ARCHIVE_NAME = '판매 완료';  // 판매 완료 상품이 한 줄씩 기록되는 시트 이름
 var TOKEN = 'oyogolf-sheet-2026';
+
+var ARCHIVE_HEADERS = [
+  '판매일', '기록시각', '재고번호', '상품명', '브랜드', '카테고리', '중고등급', '상태(%)',
+  '판매가(THB)', '원가(KRW)', 'VAT(THB)', '웹수수료(THB)', '순수익(THB)', '판매채널', '담당자', '메모'
+];
 
 function mainSheet_() {
   var ss = SpreadsheetApp.openById(SHEET_ID);
@@ -91,6 +97,7 @@ function doPost(e) {
     else if (action === 'create') result = createRow_(body.values || {});
     else if (action === 'delete') result = deleteRows_(body.rows || []);
     else if (action === 'log') result = writeLog_(body.entry || {});
+    else if (action === 'archive') result = archiveSale_(body.entry || {});
     else throw new Error('지원하지 않는 요청입니다.');
 
     if (requestId && result.ok) cache.put(requestId, '1', 600);
@@ -232,6 +239,61 @@ function writeLog_(entry) {
   ]);
   SpreadsheetApp.flush();
   return { ok: true, message: '이력을 기록했습니다.' };
+}
+
+/** 판매 완료 시트를 찾고, 없으면 머리글까지 만들어 둡니다. */
+function archiveSheet_() {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(ARCHIVE_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(ARCHIVE_NAME);
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(ARCHIVE_HEADERS);
+    sheet.setFrozenRows(1);
+  }
+  return sheet;
+}
+
+/**
+ * 판매 완료 상품을 '판매 완료' 시트에 한 줄로 기록합니다.
+ * 같은 재고번호가 이미 있으면 새 줄을 만들지 않고 그 줄을 갱신합니다.
+ */
+function archiveSale_(entry) {
+  var sheet = archiveSheet_();
+  var lastCol = Math.max(sheet.getLastColumn(), ARCHIVE_HEADERS.length);
+  var head = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var map = {};
+  for (var i = 0; i < head.length; i += 1) {
+    var name = String(head[i]).trim();
+    if (name) map[name] = i;
+  }
+
+  var idCol = map['재고번호'];
+  var target = 0;
+  if (idCol !== undefined) {
+    var index = indexById_(sheet, idCol);
+    target = index[String(entry['재고번호'] || '').trim()] || 0;
+  }
+
+  var row = [];
+  for (var c = 0; c < head.length; c += 1) row.push('');
+  for (var key in entry) {
+    if (!Object.prototype.hasOwnProperty.call(entry, key)) continue;
+    if (map[key] === undefined) continue;
+    row[map[key]] = entry[key];
+  }
+  if (map['기록시각'] !== undefined) row[map['기록시각']] = new Date();
+
+  if (target) {
+    sheet.getRange(target, 1, 1, head.length).setValues([row]);
+    SpreadsheetApp.flush();
+    return { ok: true, updated: 1, message: '판매 완료 시트의 기존 기록을 갱신했습니다.' };
+  }
+
+  sheet.appendRow(row);
+  SpreadsheetApp.flush();
+  return { ok: true, created: 1, message: '판매 완료 시트에 기록했습니다.' };
 }
 `;
 

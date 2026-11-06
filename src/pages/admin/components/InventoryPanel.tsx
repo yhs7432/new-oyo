@@ -6,6 +6,7 @@ import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb, statusClass } from '@/pages/admin/utils';
 import ItemEditModal from '@/pages/admin/components/ItemEditModal';
 import { isWriterReady, updateSheetRows } from '@/services/sheetWrite';
+import { isSoldItem } from '@/utils/settlement';
 import {
   CATEGORY_LABEL,
   SPECIAL_FLAG,
@@ -31,6 +32,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
   const [type, setType] = useState('all');
   const [status, setStatus] = useState('all');
   const [exposure, setExposure] = useState('all');
+  const [hideSold, setHideSold] = useState(true);
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -77,9 +79,12 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
     [items],
   );
 
+  const soldCount = useMemo(() => items.filter(isSoldItem).length, [items]);
+
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return items.filter((product) => {
+      if (hideSold && isSoldItem(product)) return false;
       if (type !== 'all' && product.type !== type) return false;
       if (status !== 'all' && (product.stockStatus ?? '상태 없음') !== status) return false;
       if (exposure === 'shown' && product.visible === false) return false;
@@ -90,7 +95,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
         .toLowerCase()
         .includes(keyword);
     });
-  }, [items, query, type, status, exposure]);
+  }, [items, query, type, status, exposure, hideSold]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -99,7 +104,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
 
   useEffect(() => {
     setPage(1);
-  }, [query, type, status, exposure, pageSize]);
+  }, [query, type, status, exposure, hideSold, pageSize]);
 
   const pageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -209,6 +214,18 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
             ))}
           </select>
 
+          <label className="flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border border-background-300 bg-background-100 px-2.5 py-2 text-[11.5px] text-foreground-600">
+            <input
+              type="checkbox"
+              checked={hideSold}
+              onChange={(event) => setHideSold(event.target.checked)}
+              className="h-3.5 w-3.5 cursor-pointer accent-foreground-900"
+            />
+            판매 완료 숨기기
+            <span className="rounded-full bg-background-200 px-1.5 text-[10px] text-foreground-700">
+              {soldCount}
+            </span>
+          </label>
           <label className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-background-300 bg-background-100 px-2.5 py-2 text-[11.5px] text-foreground-600">
             1฿ =
             <input
@@ -262,6 +279,12 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
       {!error && !loading && filtered.length === 0 && (
         <p className="mt-4 rounded-lg border border-background-200 bg-background-50 px-4 py-8 text-center text-[12.5px] text-foreground-600">
           조건에 맞는 상품이 없습니다.
+          {hideSold && soldCount > 0 && (
+            <span className="mt-1 block text-[11.5px] text-foreground-500">
+              판매 완료 상품 {soldCount}건은 숨겨져 있습니다. 위의 “판매 완료 숨기기”를 끄면 함께
+              표시됩니다.
+            </span>
+          )}
         </p>
       )}
 
@@ -434,6 +457,9 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
             <span className="text-[11.5px] text-foreground-600">
               총 {filtered.length.toLocaleString('en-US')}개 ·{' '}
               {(safePage - 1) * pageSize + 1}–{Math.min(safePage * pageSize, filtered.length)}개 표시
+              {hideSold && soldCount > 0 && (
+                <span className="ml-1.5 text-foreground-500">(판매 완료 {soldCount}건 숨김)</span>
+              )}
             </span>
             <div className="flex flex-wrap items-center gap-1.5">
               <button
