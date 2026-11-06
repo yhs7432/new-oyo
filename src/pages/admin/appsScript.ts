@@ -99,6 +99,7 @@ function doPost(e) {
     else if (action === 'delete') result = deleteRows_(body.rows || []);
     else if (action === 'log') result = writeLog_(body.entry || {});
     else if (action === 'archive') result = archiveSale_(body.entry || {});
+    else if (action === 'unarchive') result = unarchiveSale_(body.rows || []);
     else throw new Error('지원하지 않는 요청입니다.');
 
     if (requestId && result.ok) cache.put(requestId, '1', 600);
@@ -311,6 +312,72 @@ function archiveSale_(entry) {
   sheet.appendRow(row);
   SpreadsheetApp.flush();
   return { ok: true, created: 1, message: '판매 완료 시트에 기록했습니다.' };
+}
+
+/**
+ * 판매 완료를 되돌린 상품의 기록을 '판매 완료' 시트에서 지웁니다.
+ * 재고번호가 같은 줄을 모두 찾아 아래쪽부터 삭제합니다.
+ */
+function unarchiveSale_(rows) {
+  var ss = SpreadsheetApp.openById(SHEET_ID);
+  var sheet = ss.getSheetByName(ARCHIVE_NAME);
+  if (!sheet || sheet.getLastRow() < 2) {
+    return { ok: true, removed: 0, message: '판매 완료 시트에 지울 기록이 없습니다.' };
+  }
+
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var head = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var idCol = -1;
+  for (var i = 0; i < head.length; i += 1) {
+    if (String(head[i]).trim() === '재고번호') { idCol = i; break; }
+  }
+  if (idCol === -1) throw new Error('판매 완료 시트에 재고번호 열이 없습니다.');
+
+  var wanted = {};
+  for (var r = 0; r < rows.length; r += 1) {
+    var row = rows[r] || {};
+    var key = String(row.id || '').trim();
+    if (!key) continue;
+    wanted[key] = String(row.name || '');
+  }
+
+  var lastRow = sheet.getLastRow();
+  var ids = sheet.getRange(2, idCol + 1, lastRow - 1, 1).getValues();
+  var targets = [];
+  for (var s = 0; s < ids.length; s += 1) {
+    var found = String(ids[s][0]).trim();
+    if (wanted[found] === undefined) continue;
+    targets.push({ row: s + 2, id: found, name: wanted[found] });
+  }
+
+  // 아래쪽 행부터 지워야 위쪽 행 번호가 밀리지 않습니다.
+  targets.sort(function (a, b) { return b.row - a.row; });
+  var removed = [];
+  for (var t = 0; t < targets.length; t += 1) {
+    sheet.deleteRow(targets[t].row);
+    removed.push(targets[t]);
+  }
+  SpreadsheetApp.flush();
+
+  for (var l = 0; l < removed.length; l += 1) {
+    writeLog_({
+      '구분': '판매 취소',
+      '재고번호': removed[l].id,
+      '상품명': removed[l].name,
+      '이전값': '판매 완료 시트 기록',
+      '새값': '판매 완료 → 판매 가능으로 되돌림',
+      '메모': '판매 완료 기록 삭제'
+    });
+  }
+
+  if (removed.length === 0) {
+    return { ok: true, removed: 0, message: '판매 완료 시트에 해당 기록이 없어 그대로 두었습니다.' };
+  }
+  return {
+    ok: true,
+    removed: removed.length,
+    message: '판매 완료 시트 기록 ' + removed.length + '건을 지웠습니다.'
+  };
 }
 `;
 

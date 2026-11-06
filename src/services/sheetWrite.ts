@@ -214,4 +214,17 @@ export function archiveSaleEntry(
   return send({ action: 'archive', entry });
 }
 
+/**
+ * 판매 완료를 되돌릴 때 '판매 완료' 탭에 남아 있던 기록을 함께 지웁니다.
+ * 재고번호가 같은 줄을 시트에서 삭제합니다.
+ */
+export function removeSaleArchiveEntries(
+  rows: { id: string; name?: string }[],
+): Promise<SheetWriteResult> {
+  return send({
+    action: 'unarchive',
+    rows: rows.map((row) => ({ id: row.id, name: row.name ?? '' })),
+  });
+}
+
 export const SHEET_CONNECTION_STORAGE_KEY = SCRIPT_URL_KEY;

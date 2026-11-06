@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import type { Product } from '@/types/product';
-import { deleteSheetRows, updateSheetRows } from '@/services/sheetWrite';
+import { archiveSaleEntry, deleteSheetRows, removeSaleArchiveEntries, updateSheetRows } from '@/services/sheetWrite';
 import {
   GRADE_OPTIONS,
   STOCK_STATUS_OPTIONS,
@@ -13,6 +13,7 @@ import {
   statusClass,
 } from '@/pages/admin/utils';
 import {
+  CATEGORY_LABEL,
   FEE_RATE,
   FEE_RATE_LEGACY,
   FX_RATE,
@@ -26,6 +27,9 @@ import {
   readNoteValue,
   writeNoteValue,
 } from '@/utils/sheetNote';
+
+/** 판매 완료 시트의 ‘판매채널’ 칸에 들어갈 선택지입니다. */
+const SALE_CHANNELS = ['매장 판매', '도매 파트너', '온라인', '기타'];
 
 interface Props {
   product: Product;
@@ -86,6 +90,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const isClub = isClubType(product.type);
 
   const [state, setState] = useState<SaveState>('idle');
+  const [channel, setChannel] = useState(SALE_CHANNELS[0]);
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -123,6 +128,9 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
 
   /** 재고상태가 '판매 완료' 계열이면 웹노출은 항상 N으로 맞춥니다. */
   const isSoldStatus = (status: string) => status.includes('완료');
+  const originalStockStatus = raw['재고상태'] ?? product.stockStatus ?? '판매 가능';
+  /** 판매 완료로 기록된 상품을 다시 판매 가능으로 되돌리는 중인지. */
+  const isReverting = isSoldStatus(originalStockStatus) && !isSoldStatus(stockStatus);
   const initialVisible = raw['웹노출'] ?? 'Y';
   const originalVisible = isSoldStatus(raw['재고상태'] ?? product.stockStatus ?? '판매 가능')
     ? 'N'
@@ -200,9 +208,69 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     if (finalNote !== originalNote) fields['비고'] = finalNote;
 
     const result = await updateSheetRows([{ id: product.id, fields }]);
+    if (!result.ok) {
+      setMessage(result.message);
+      setState('error');
+      return;
+    }
+
+    // 판매 가능 → 판매 완료로 바뀐 순간, '판매 완료' 시트에도 한 줄 기록합니다.
+    const wasSold = isSoldStatus(originalStockStatus);
+    if (isSoldStatus(stockStatus) && !wasSold) {
+      const archive = await archiveSaleEntry({
+        판매일: saleDate || todayInput(),
+        재고번호: product.id,
+        상품명: name.trim(),
+        브랜드: brand.trim(),
+        카테고리: CATEGORY_LABEL[nextCategory],
+        중고등급: grade,
+        '상태(%)': condition,
+        '판매가(THB)': parsedPrice,
+        '원가(KRW)': costKrw,
+        'VAT(THB)': Math.round(vatAmount),
+        '웹수수료(THB)': Math.round(feeAmount),
+        '순수익(THB)': Math.round(netThb),
+        환율: rateToFreeze,
+        판매채널: channel,
+        담당자: staff.trim(),
+        메모: '',
+      });
+
+      if (!archive.ok) {
+        setMessage(
+          `${result.message} 다만 '판매 완료' 시트 기록은 실패했습니다 — ${archive.message} 「시트 연동」 화면에서 스크립트를 최신 버전으로 다시 배포한 뒤 다시 저장해 주세요.`,
+        );
+        setState('error');
+        onSaved();
+        return;
+      }
+
+      setMessage(`${result.message} ${archive.message}`);
+      setState('done');
+      onSaved();
+      return;
+    }
+
+    // 판매 완료 → 판매 가능으로 되돌리면 '판매 완료' 탭의 기록도 함께 지웁니다.
+    if (!isSoldStatus(stockStatus) && wasSold) {
+      const cleanup = await removeSaleArchiveEntries([{ id: product.id, name: name.trim() }]);
+      if (!cleanup.ok) {
+        setMessage(
+          `${result.message} 다만 '판매 완료' 시트 기록은 지우지 못했습니다 — ${cleanup.message} 「시트 연동」 화면에서 스크립트를 최신 버전으로 다시 배포한 뒤 다시 저장해 주세요.`,
+        );
+        setState('error');
+        onSaved();
+        return;
+      }
+      setMessage(`${result.message} 판매 완료를 되돌렸습니다. ${cleanup.message}`);
+      setState('done');
+      onSaved();
+      return;
+    }
+
     setMessage(result.message);
-    setState(result.ok ? 'done' : 'error');
-    if (result.ok) onSaved();
+    setState('done');
+    onSaved();
   };
 
   const remove = async () => {
@@ -403,6 +471,25 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                 판매 완료로 바꾸면 오늘 날짜가 자동 입력됩니다.
               </span>
             </label>
+            {isSoldStatus(stockStatus) && (
+              <label className="block min-w-0">
+                <span className={labelClass}>판매 채널</span>
+                <select
+                  value={channel}
+                  onChange={(event) => setChannel(event.target.value)}
+                  className={`${inputClass} cursor-pointer`}
+                >
+                  {SALE_CHANNELS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+                <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
+                  판매 완료 시트에 이 채널로 기록됩니다.
+                </span>
+              </label>
+            )}
             <label className="block min-w-0">
               <span className={labelClass}>웹노출</span>
               <select
@@ -620,8 +707,28 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             <p className="mt-2 text-[10.5px] leading-relaxed text-foreground-500">
               순수익 = 판매가 − 원가(THB 환산) − VAT(판매가의 %) − 웹 수수료(바트 직접 입력). 금액을
               바꾸면 바로 다시 계산됩니다. 판매 완료로 저장하면 그 시점 환율이 함께 고정되어, 이후
-              환율이 올라도 이 상품의 원가는 바뀌지 않습니다.
+              환율이 올라도 이 상품의 원가는 바뀌지 않습니다. 동시에 시트의 ‘판매 완료’ 탭에도 이
+              내용이 한 줄로 기록됩니다.
             </p>
+            {isSoldStatus(stockStatus) && (
+              <p className="mt-1.5 text-[10.5px] leading-relaxed text-foreground-500">
+                <i className="ri-information-line mr-1"></i>
+                판매 완료로 저장하면 판매 시점 환율이 고정되고, 시트 ‘판매 완료’ 탭에 한 줄로 기록됩니다.
+              </p>
+            )}
+            {isReverting && (
+              <p className="mt-1.5 rounded-md border border-accent-300/70 bg-accent-50 px-2.5 py-2 text-[10.5px] leading-relaxed text-accent-900">
+                <i className="ri-arrow-go-back-line mr-1"></i>
+                저장하면 이 상품은 판매 가능으로 되돌아가고, 시트 ‘판매 완료’ 탭에 남아 있던 이 상품 기록도 함께 삭제됩니다. 고정됐던 정산 환율도 해제됩니다.
+              </p>
+            )}
+            {isSoldStatus(raw['재고상태'] ?? product.stockStatus ?? '') && (
+              <p className="mt-1.5 text-[10.5px] leading-relaxed text-foreground-500">
+                <i className="ri-information-line mr-1"></i>
+                이미 판매 완료로 기록된 상품입니다. ‘판매 완료’ 탭의 기존 기록은 판매 당시 내용으로
+                유지됩니다.
+              </p>
+            )}
           </div>
 
           {state !== 'idle' && (
