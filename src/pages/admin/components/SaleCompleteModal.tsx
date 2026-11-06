@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Product } from '@/types/product';
 import { useFxRate } from '@/hooks/useFxRate';
+import { formatFxRate, quoteInBase, rateFromQuote } from '@/services/fxRate';
 import { formatKrw, formatThb, todayIso } from '@/pages/admin/utils';
 import { archiveSaleEntry, updateSheetRows } from '@/services/sheetWrite';
 import {
@@ -34,7 +35,7 @@ const CHANNELS = ['매장 판매', '도매 파트너', '온라인', '기타'];
  * 2) 같은 내용을 '판매 완료' 탭에 한 줄로 기록합니다.
  */
 export default function SaleCompleteModal({ product, staffName, onClose, onCompleted }: Props) {
-  const { rate } = useFxRate();
+  const { rate, base } = useFxRate();
   const raw = product.raw ?? {};
   const note = raw['비고'] ?? '';
 
@@ -60,17 +61,43 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
 
   /** 이미 판매 완료로 기록된 상품은 그때 고정된 환율을 그대로 이어서 씁니다. */
   const storedRate = (product.stockStatus ?? '').includes('완료') ? noteFxRate(note) : 0;
-  const [fxRate, setFxRate] = useState(String(storedRate > 0 ? storedRate : rate));
+
+  /** 환율을 현재 기준(1฿ / 1원)으로 표기합니다. */
+  const draftRate = (value: number): string => {
+    const quote = quoteInBase(value, base);
+    if (!quote) return '';
+    const text = quote.toFixed(base === 'krw' ? 4 : 2);
+    return text.includes('.') ? text.replace(/0+$/, '').replace(/\.$/, '') : text;
+  };
+
+  const [fxRate, setFxRate] = useState(() => draftRate(storedRate > 0 ? storedRate : rate));
   const [fxTouched, setFxTouched] = useState(false);
+  const prevBase = useRef(base);
 
   // 오늘 환율을 아직 불러오는 중이었다면, 도착한 값으로 한 번 맞춰 줍니다.
   useEffect(() => {
     if (fxTouched || storedRate > 0) return;
-    setFxRate(String(rate));
+    setFxRate(draftRate(rate));
   }, [rate, fxTouched, storedRate]);
 
   const fxRateValue = Number(fxRate.replace(/[^0-9.]/g, '')) || 0;
-  const appliedRate = fxRateValue > 0 ? fxRateValue : rate;
+  const appliedRate = fxTouched
+    ? rateFromQuote(fxRateValue, base) || rate
+    : storedRate > 0
+      ? storedRate
+      : rate;
+
+  // 기준을 바꾸면 입력값을 반대 방향 표기로 다시 보여 줍니다.
+  useEffect(() => {
+    const previous = prevBase.current;
+    if (previous === base) return;
+    prevBase.current = base;
+    setFxRate((current) => {
+      const numeric = Number(current.replace(/[^0-9.]/g, '')) || 0;
+      const krwPerThb = rateFromQuote(numeric, previous);
+      return draftRate(krwPerThb > 0 ? krwPerThb : rate);
+    });
+  }, [base, rate]);
 
   const saleThb = Number(price.replace(/[^0-9.-]/g, '')) || 0;
   const costKrw = Number(String(raw['한국원가(KRW)'] ?? '').replace(/[^0-9]/g, '')) || 0;
@@ -219,7 +246,7 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
             </label>
             <label className="block min-w-0">
               <span className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-foreground-500">
-                정산 환율 (원 / 1฿)
+                정산 환율 ({base === 'krw' ? '฿ / 1원' : '원 / 1฿'})
               </span>
               <input
                 type="text"
@@ -229,12 +256,12 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
                   setFxTouched(true);
                   setFxRate(event.target.value.replace(/[^0-9.]/g, ''));
                 }}
-                placeholder="예: 40.2"
+                placeholder={base === 'krw' ? '예: 0.0252' : '예: 40.2'}
                 className="w-full box-border rounded-md border border-background-300 bg-background-100 px-3 py-2 text-right text-sm text-foreground-900 outline-none focus:border-primary-500"
               />
               <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
                 {storedRate > 0
-                  ? `판매 당시 저장된 ${storedRate}원을 그대로 씁니다.`
+                  ? `판매 당시 저장된 ${formatFxRate(storedRate, base)}을 그대로 씁니다.`
                   : (product.stockStatus ?? '').includes('완료')
                     ? '판매 당시 환율 기록이 없어 오늘 환율로 채웁니다. 저장하면 이 값으로 고정됩니다.'
                     : '저장하면 이 환율로 고정됩니다.'}
@@ -326,7 +353,7 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
                 <dd className="text-foreground-900">
                   − {formatThb(costThb)}
                   <span className="ml-1 text-[10.5px] text-foreground-500">
-                    (1฿ = {appliedRate}원 고정)
+                    (${formatFxRate(appliedRate, base)} 고정)
                   </span>
                 </dd>
               </div>

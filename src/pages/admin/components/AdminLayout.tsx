@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import type { AdminIdentity, AdminTab } from '@/config/admin';
 import { ADMIN_TABS, ROLE_LABEL, isInternalRole, tabsForRole } from '@/config/admin';
 import SheetSyncBadge from '@/pages/admin/components/SheetSyncBadge';
+import FxRateControl from '@/pages/admin/components/FxRateControl';
 
 interface Props {
   tab: AdminTab;
@@ -109,12 +110,15 @@ export default function AdminLayout({
               <span className="hidden font-heading text-[15px] text-foreground-950 lg:block">
                 {active?.label ?? '파트너 센터'}
               </span>
-              <span className="hidden rounded-full bg-secondary-100 px-2.5 py-0.5 text-[10.5px] font-medium text-secondary-900 sm:inline">
+              <span className="hidden rounded-full bg-secondary-100 px-2.5 py-0.5 text-[10.5px] font-medium text-secondary-900 xl:inline">
                 {internal ? '운영 콘솔' : '도매 파트너'} · {total.toLocaleString('en-US')}개
               </span>
             </div>
 
             <div className="flex items-center gap-2">
+              <div className="hidden lg:block">
+                <FxRateControl caption={false} />
+              </div>
               <SheetSyncBadge
                 lastSyncedAt={lastSyncedAt}
                 refreshing={refreshing}
@@ -134,7 +138,17 @@ export default function AdminLayout({
             </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto px-4 pb-2.5 lg:hidden">
+          <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 border-t border-background-200 px-4 py-1.5 md:px-7 lg:hidden">
+            <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.16em] text-foreground-500">
+              <span className="flex h-3.5 w-3.5 items-center justify-center text-[11px]">
+                <i className="ri-exchange-dollar-line"></i>
+              </span>
+              정산 환율
+            </p>
+            <FxRateControl />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-1.5 px-4 pb-2.5 pt-0.5 lg:hidden">
             {tabs.map((item) => {
               const isActive = item.key === tab;
               return (
@@ -142,13 +156,16 @@ export default function AdminLayout({
                   key={item.key}
                   type="button"
                   onClick={() => onTab(item.key)}
-                  className={`flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-[11.5px] transition-colors ${
+                  aria-current={isActive ? 'page' : undefined}
+                  className={`flex shrink-0 cursor-pointer items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-[5px] text-[12px] leading-none transition-colors ${
                     isActive
-                      ? 'bg-foreground-900 text-background-50'
-                      : 'border border-background-300 text-foreground-700'
+                      ? 'bg-foreground-900 font-medium text-background-50'
+                      : 'border border-background-300 bg-background-50 text-foreground-700'
                   }`}
                 >
-                  <i className={item.icon}></i>
+                  <span className="flex h-3.5 w-3.5 items-center justify-center text-[12.5px]">
+                    <i className={item.icon}></i>
+                  </span>
                   {item.label}
                 </button>
               );

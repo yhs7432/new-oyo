@@ -2,11 +2,13 @@ import { useMemo, useState } from 'react';
 import type { Product } from '@/types/product';
 import { formatKrw, formatThb } from '@/pages/admin/utils';
 import { useFxRate } from '@/hooks/useFxRate';
+import { formatFxRate } from '@/services/fxRate';
 import {
   isRangeActive,
   lockedRateCount,
   monthlySettlement,
   outOfRangeCount,
+  settlementLines,
   totalSettlement,
   undatedSoldCount,
   type DateRange,
@@ -15,6 +17,7 @@ import SettlementPeriodFilter, {
   rangeLabel,
 } from '@/pages/admin/components/SettlementPeriodFilter';
 import SettlementTrend from '@/pages/admin/components/SettlementTrend';
+import SettlementDetailModal from '@/pages/admin/components/SettlementDetailModal';
 
 interface Props {
   items: Product[];
@@ -25,8 +28,9 @@ interface Props {
  * 처음 화면과 판매·출고 화면에서 같은 기준으로 재사용한다.
  */
 export default function SettlementSection({ items }: Props) {
-  const { rate, auto, rateDate } = useFxRate();
+  const { rate, base, auto, rateDate } = useFxRate();
   const [rawRange, setRawRange] = useState<DateRange>({ from: '', to: '' });
+  const [detailOpen, setDetailOpen] = useState(false);
 
   const range = useMemo<DateRange>(() => {
     if (rawRange.from && rawRange.to && rawRange.from > rawRange.to) {
@@ -41,6 +45,7 @@ export default function SettlementSection({ items }: Props) {
   const excluded = useMemo(() => outOfRangeCount(items, range), [items, range]);
   const undated = useMemo(() => undatedSoldCount(items), [items]);
   const lockedCount = useMemo(() => lockedRateCount(items, range), [items, range]);
+  const lines = useMemo(() => settlementLines(items, rate, range), [items, rate, range]);
 
   return (
     <div>
@@ -61,6 +66,14 @@ export default function SettlementSection({ items }: Props) {
             </span>
           </p>
           <div className="flex flex-wrap items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => setDetailOpen(true)}
+              className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-full border border-foreground-300 px-2.5 py-0.5 text-[10px] text-foreground-800 transition-colors hover:border-foreground-500 hover:bg-background-100"
+            >
+              <i className="ri-file-list-3-line text-[11px]"></i>
+              판매 내역 {settlement.count}건 상세 보기
+            </button>
             {lockedCount > 0 && (
               <span className="rounded-full bg-accent-100 px-2 py-0.5 text-[10px] text-accent-900">
                 판매 시점 환율 고정 {lockedCount}건
@@ -115,12 +128,21 @@ export default function SettlementSection({ items }: Props) {
           원가는 각 판매 건의 <strong className="font-medium text-foreground-700">판매 완료 시점
           환율</strong>로 환산합니다. 판매 당시 환율이 함께 저장되어 있으면 이후 환율이 올라도 그
           건은 그날 값으로 고정되고, 예전에 기록된 건만 현재 환율(
-          <strong className="font-medium text-foreground-700">1฿ = {rate}원</strong>
+          <strong className="font-medium text-foreground-700">{formatFxRate(rate, base)}</strong>
           {auto ? ` · ${rateDate || '오늘'} 자동 조회` : ' · 직접 입력'})로 계산합니다. 상품별
           VAT(판매가의 %)와 웹 수수료(바트 금액)를 빼서 순수익을 구하고, 마진율은 (순수익 ÷
           판매가 합계) 기준입니다.
         </p>
       </div>
+
+      {detailOpen && (
+        <SettlementDetailModal
+          lines={lines}
+          totals={settlement}
+          periodLabel={rangeActive ? rangeLabel(range) : '전체 기간'}
+          onClose={() => setDetailOpen(false)}
+        />
+      )}
 
       <SettlementTrend
         rows={monthly}

@@ -5,7 +5,6 @@ import { SHEET_EDIT_URL } from '@/config/admin';
 import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb, statusClass } from '@/pages/admin/utils';
 import ItemEditModal from '@/pages/admin/components/ItemEditModal';
-import FxRateControl from '@/pages/admin/components/FxRateControl';
 import { isWriterReady, updateSheetRows } from '@/services/sheetWrite';
 import { isSoldItem } from '@/utils/settlement';
 import {
@@ -134,7 +133,6 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <FxRateControl />
           <button
             type="button"
             onClick={onRetry}

@@ -1,19 +1,28 @@
 import { useEffect, useRef, useState } from 'react';
 import { useFxRate } from '@/hooks/useFxRate';
-import { FX_SOURCE_LABEL } from '@/services/fxRate';
+import { FX_SOURCE_LABEL, formatFxRateInverse, quoteInBase, rateFromQuote } from '@/services/fxRate';
 
 interface Props {
   /** Show the small "which rate / which day" caption under the control. */
   caption?: boolean;
 }
 
+function draftOf(rate: number, base: 'thb' | 'krw'): string {
+  const quote = quoteInBase(rate, base);
+  if (!quote) return '';
+  const text = quote.toFixed(base === 'krw' ? 4 : 2);
+  return text.includes('.') ? text.replace(/0+$/, '').replace(/\.$/, '') : text;
+}
+
 /**
- * THB → KRW rate control used across the admin console.
+ * THB ↔ KRW rate control used across the admin console.
  * The daily quote is fetched automatically; typing a value switches to manual.
+ * The quote can be read/entered either as `1฿ = ?원` or as `1원 = ?฿`.
  */
 export default function FxRateControl({ caption = true }: Props) {
   const {
     rate,
+    base,
     auto,
     loading,
     error,
@@ -21,28 +30,39 @@ export default function FxRateControl({ caption = true }: Props) {
     source,
     stale,
     setRate,
+    setBase,
     enableAuto,
     refresh,
   } = useFxRate();
-  const [draft, setDraft] = useState(String(rate));
+  const [draft, setDraft] = useState(() => draftOf(rate, base));
   const focused = useRef(false);
 
   useEffect(() => {
-    if (!focused.current) setDraft(String(rate));
-  }, [rate]);
+    if (!focused.current) setDraft(draftOf(rate, base));
+  }, [rate, base]);
 
   const commit = (value: string) => {
-    const parsed = Number(value.replace(/[^0-9.]/g, ''));
-    if (Number.isFinite(parsed) && parsed > 0) {
-      setRate(parsed);
+    if (value.trim() === draftOf(rate, base)) {
+      setDraft(draftOf(rate, base));
       return;
     }
-    setDraft(String(rate));
+    const parsed = Number(value.replace(/[^0-9.]/g, ''));
+    const next = rateFromQuote(parsed, base);
+    if (next > 0) {
+      setRate(next);
+      return;
+    }
+    setDraft(draftOf(rate, base));
   };
 
   const statusText = auto
     ? `${rateDate ? `${rateDate} 기준` : '오늘 기준'} · ${source ? FX_SOURCE_LABEL[source] : '자동 조회'}`
     : '직접 입력한 환율로 계산 중';
+
+  const baseOptions: { key: 'thb' | 'krw'; label: string }[] = [
+    { key: 'thb', label: '1฿' },
+    { key: 'krw', label: '1원' },
+  ];
 
   return (
     <div className="flex flex-col gap-1">
@@ -50,10 +70,36 @@ export default function FxRateControl({ caption = true }: Props) {
         <span className="flex h-4 w-4 items-center justify-center text-[13px] text-foreground-500">
           <i className="ri-exchange-dollar-line"></i>
         </span>
-        <span className="text-[11px] text-foreground-600">1฿ =</span>
+        <div
+          role="group"
+          aria-label="환율 기준 선택"
+          className="flex items-center gap-0.5 rounded-full border border-background-300 bg-background-100 p-0.5"
+        >
+          {baseOptions.map((option) => (
+            <button
+              key={option.key}
+              type="button"
+              onClick={() => setBase(option.key)}
+              aria-pressed={base === option.key}
+              title={
+                option.key === 'thb'
+                  ? '1바트에 몇 원인지로 환율을 봅니다'
+                  : '1원에 몇 바트인지로 환율을 봅니다'
+              }
+              className={`cursor-pointer rounded-full px-1.5 py-0.5 text-[10px] leading-none transition-colors ${
+                base === option.key
+                  ? 'bg-background-50 font-medium text-foreground-900'
+                  : 'text-foreground-500 hover:text-foreground-800'
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+        <span className="text-[11px] text-foreground-600">=</span>
         <input
           type="number"
-          step={0.01}
+          step={base === 'krw' ? 0.0001 : 0.01}
           inputMode="decimal"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
@@ -67,10 +113,10 @@ export default function FxRateControl({ caption = true }: Props) {
           onKeyDown={(event) => {
             if (event.key === 'Enter') event.currentTarget.blur();
           }}
-          aria-label="1바트당 원화 환율"
-          className="w-14 box-border rounded border border-background-300 bg-background-100 px-1.5 py-0.5 text-right text-[12px] text-foreground-900 outline-none focus:border-primary-500"
+          aria-label={base === 'krw' ? '1원당 바트 환율' : '1바트당 원화 환율'}
+          className="w-[76px] shrink-0 box-border appearance-none rounded border border-background-300 bg-background-100 px-1.5 py-0.5 text-right text-[12px] tabular-nums text-foreground-900 outline-none focus:border-primary-500 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
         />
-        <span className="text-[11px] text-foreground-600">원</span>
+        <span className="text-[11px] text-foreground-600">{base === 'krw' ? '฿' : '원'}</span>
         <button
           type="button"
           onClick={refresh}
@@ -105,6 +151,7 @@ export default function FxRateControl({ caption = true }: Props) {
         >
           {loading ? '오늘 환율 불러오는 중…' : error ?? statusText}
           {!error && auto && stale && !loading ? ' (최근 저장값)' : ''}
+          {!error && !loading ? ` · ${formatFxRateInverse(rate, base)}` : ''}
         </span>
       )}
     </div>

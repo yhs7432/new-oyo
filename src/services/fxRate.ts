@@ -15,9 +15,18 @@ export interface FxSnapshot {
 
 export const DEFAULT_FX_RATE = 39.7;
 
+/** Which side of the quote the console shows first. */
+export type FxBase = 'thb' | 'krw';
+
 const CACHE_KEY = 'oyogolf.admin.fx.cache';
 const AUTO_KEY = 'oyogolf.admin.fx.auto';
+const BASE_KEY = 'oyogolf.admin.fx.base';
 const TIMEOUT_MS = 8000;
+
+export const FX_BASE_LABEL: Record<FxBase, string> = {
+  thb: '1바트 기준',
+  krw: '1원 기준',
+};
 
 export const FX_SOURCE_LABEL: Record<FxSource, string> = {
   frankfurter: '유럽중앙은행(ECB)',
@@ -34,6 +43,51 @@ export function localDateKey(date: Date = new Date()): string {
 
 export function roundRate(value: number): number {
   return Math.round(value * 100) / 100;
+}
+
+/** Keeps small inverted quotes readable (1원 ≈ 0.0252바트). */
+export function roundQuote(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
+
+export function readFxBase(): FxBase {
+  const store = storage();
+  if (!store) return 'thb';
+  return store.getItem(BASE_KEY) === 'krw' ? 'krw' : 'thb';
+}
+
+export function writeFxBase(base: FxBase): void {
+  const store = storage();
+  if (!store) return;
+  store.setItem(BASE_KEY, base);
+}
+
+/** KRW-per-THB quote expressed in the selected base. */
+export function quoteInBase(rate: number, base: FxBase): number {
+  if (!Number.isFinite(rate) || rate <= 0) return 0;
+  return base === 'krw' ? roundQuote(1 / rate) : roundRate(rate);
+}
+
+/** A value typed in the selected base, converted back to KRW per 1 THB. */
+export function rateFromQuote(value: number, base: FxBase): number {
+  if (!Number.isFinite(value) || value <= 0) return 0;
+  return roundRate(base === 'krw' ? 1 / value : value);
+}
+
+function trimZeros(text: string): string {
+  return text.includes('.') ? text.replace(/0+$/, '').replace(/\.$/, '') : text;
+}
+
+/** e.g. `1฿ = 39.7원` or `1원 = 0.0252฿`. */
+export function formatFxRate(rate: number, base: FxBase): string {
+  const quote = quoteInBase(rate, base);
+  const amount = trimZeros(quote.toFixed(4));
+  return base === 'krw' ? `1원 = ${amount}฿` : `1฿ = ${trimZeros(String(quote))}원`;
+}
+
+/** The opposite direction, useful as a secondary caption. */
+export function formatFxRateInverse(rate: number, base: FxBase): string {
+  return formatFxRate(rate, base === 'krw' ? 'thb' : 'krw');
 }
 
 function storage(): Storage | null {

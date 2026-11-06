@@ -5,7 +5,6 @@ import { typeOptions } from '@/utils/products';
 import { WHOLESALE_RATE } from '@/config/admin';
 import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb, statusClass, wholesalePrice } from '@/pages/admin/utils';
-import FxRateControl from '@/pages/admin/components/FxRateControl';
 
 interface Props {
   items: Product[];
@@ -82,7 +81,6 @@ export default function PartnerPanel({ items, loading, error, onRetry }: Props) 
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 self-start">
-          <FxRateControl />
           <button
             type="button"
             onClick={onRetry}

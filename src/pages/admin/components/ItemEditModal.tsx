@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
 import type { Product } from '@/types/product';
+import { useFxRate } from '@/hooks/useFxRate';
+import { formatFxRate } from '@/services/fxRate';
 import { archiveSaleEntry, deleteSheetRows, removeSaleArchiveEntries, updateSheetRows } from '@/services/sheetWrite';
 import {
   GRADE_OPTIONS,
@@ -55,6 +57,7 @@ function todayInput(): string {
 }
 
 export default function ItemEditModal({ product, rate, onClose, onSaved }: Props) {
+  const { base } = useFxRate();
   const raw = useMemo(() => product.raw ?? {}, [product.raw]);
   const originalNote = raw['비고'] ?? '';
   const initialVat = readNoteValue(originalNote, VAT_RATE).replace(/[^0-9.]/g, '');
@@ -623,7 +626,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
               >
                 {isSold
                   ? savedFxRate > 0
-                    ? `판매 시점 환율 고정 · 1฿ = ${savedFxRate}원`
+                    ? `판매 시점 환율 고정 · ${formatFxRate(savedFxRate, base)}`
                     : '판매 완료 기준'
                   : '판매 시 자동 계산'}
               </span>
@@ -645,7 +648,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                   − {formatThb(costThb)}
                   <span className="ml-1 text-[10.5px] text-foreground-500">
                     / {formatKrw(costKrw)}
-                    {savedFxRate > 0 ? ` · 1฿ = ${savedFxRate}원 고정` : ''}
+                    {savedFxRate > 0 ? ` · ${formatFxRate(savedFxRate, base)} 고정` : ''}
                   </span>
                 </dd>
               </div>

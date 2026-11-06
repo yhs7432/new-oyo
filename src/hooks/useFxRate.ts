@@ -5,16 +5,21 @@ import {
   localDateKey,
   readAutoEnabled,
   readCachedFx,
+  readFxBase,
   readManualRate,
   writeAutoEnabled,
   writeCachedFx,
+  writeFxBase,
   writeManualRate,
+  type FxBase,
   type FxSource,
 } from '@/services/fxRate';
 
 interface FxStore {
   /** KRW per 1 THB */
   rate: number;
+  /** Which side of the quote is shown/entered first */
+  base: FxBase;
   /** true = daily quote from the FX provider, false = typed in by the user */
   auto: boolean;
   status: 'idle' | 'loading' | 'ready' | 'error';
@@ -30,6 +35,7 @@ interface FxStore {
 function createInitialState(): FxStore {
   const base: FxStore = {
     rate: DEFAULT_FX_RATE,
+    base: readFxBase(),
     auto: true,
     status: 'idle',
     error: null,
@@ -180,6 +186,13 @@ function disableAuto(): void {
   });
 }
 
+/** Switching the base only changes how the quote is read and typed. */
+function switchBase(next: FxBase): void {
+  if (next === state.base) return;
+  writeFxBase(next);
+  emit({ base: next });
+}
+
 /** Refresh button: re-fetch today's quote (switching back to auto if needed). */
 function refresh(): void {
   if (!state.auto) {
@@ -191,6 +204,7 @@ function refresh(): void {
 
 export interface FxRateApi {
   rate: number;
+  base: FxBase;
   auto: boolean;
   loading: boolean;
   error: string | null;
@@ -199,6 +213,8 @@ export interface FxRateApi {
   source: FxSource | '';
   stale: boolean;
   setRate: (next: number) => void;
+  setBase: (next: FxBase) => void;
+  toggleBase: () => void;
   enableAuto: () => void;
   disableAuto: () => void;
   refresh: () => void;
@@ -210,9 +226,12 @@ export function useFxRate(): FxRateApi {
   const enable = useCallback(() => enableAuto(), []);
   const disable = useCallback(() => disableAuto(), []);
   const refreshRate = useCallback(() => refresh(), []);
+  const changeBase = useCallback((next: FxBase) => switchBase(next), []);
+  const flipBase = useCallback(() => switchBase(snapshot.base === 'thb' ? 'krw' : 'thb'), [snapshot.base]);
 
   return {
     rate: snapshot.rate,
+    base: snapshot.base,
     auto: snapshot.auto,
     loading: snapshot.status === 'loading',
     error: snapshot.error,
@@ -221,6 +240,8 @@ export function useFxRate(): FxRateApi {
     source: snapshot.source,
     stale: snapshot.stale,
     setRate: setManualRate,
+    setBase: changeBase,
+    toggleBase: flipBase,
     enableAuto: enable,
     disableAuto: disable,
     refresh: refreshRate,

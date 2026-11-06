@@ -135,6 +135,34 @@ export function settlementOf(item: Product, rate: number): SettledItem {
   };
 }
 
+export interface SettlementLine extends SettledItem {
+  product: Product;
+}
+
+/**
+ * 선택 기간 안의 판매 완료 건을 판매일 최신순으로 돌려줍니다.
+ * 판매일이 없는 건은 맨 뒤로 보냅니다.
+ */
+export function settlementLines(
+  items: Product[],
+  rate: number,
+  range: DateRange | null = null,
+): SettlementLine[] {
+  return items
+    .filter(isSoldItem)
+    .map((product) => ({ ...settlementOf(product, rate), product }))
+    .filter((line) => inDateRange(line.saleDate, range))
+    .sort((a, b) => {
+      const left = normalizeDate(a.saleDate);
+      const right = normalizeDate(b.saleDate);
+      if (!left && !right) return a.product.id < b.product.id ? 1 : -1;
+      if (!left) return 1;
+      if (!right) return -1;
+      if (left === right) return a.product.id < b.product.id ? 1 : -1;
+      return left < right ? 1 : -1;
+    });
+}
+
 /** 판매 완료 시점 환율이 고정된 판매 건 수(선택 기간 기준). */
 export function lockedRateCount(items: Product[], range: DateRange | null = null): number {
   return items.filter(

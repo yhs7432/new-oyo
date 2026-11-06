@@ -42,7 +42,7 @@ export default function SheetSyncBadge({
             ? `구글시트를 ${intervalSeconds}초마다 자동으로 다시 읽습니다.`
             : '자동 동기화가 꺼져 있습니다.'
         }
-        className="hidden items-center gap-1.5 whitespace-nowrap rounded-full border border-background-200 bg-background-100 px-2.5 py-1 text-[10.5px] text-foreground-600 sm:inline-flex"
+        className="hidden items-center gap-1.5 whitespace-nowrap rounded-full border border-background-200 bg-background-100 px-2.5 py-1 text-[10.5px] text-foreground-600 xl:inline-flex"
       >
         <span
           className={`flex h-3 w-3 items-center justify-center text-[11px] ${

@@ -5,7 +5,8 @@ import { SHEET_EDIT_URL } from '@/config/admin';
 import { formatThb, statusClass } from '@/pages/admin/utils';
 import SettlementSection from '@/pages/admin/components/SettlementSection';
 import SaleCompleteModal from '@/pages/admin/components/SaleCompleteModal';
-import { isSoldItem } from '@/utils/settlement';
+import { isSoldItem, normalizeDate } from '@/utils/settlement';
+import { SALE_DATE, readNoteValue } from '@/utils/sheetNote';
 
 export type StageKey = 'register' | 'dispatch' | 'receive' | 'sale' | 'audit' | 'history';
 
@@ -99,6 +100,11 @@ type SaleFilter = 'ready' | 'sold' | 'all';
 
 const LIST_LIMIT = 30;
 
+/** 비고에 기록된 판매 완료일(예: `판매일:2026-11-05`). */
+function saleDateOf(item: Product): string {
+  return readNoteValue(item.raw?.['비고'] ?? '', SALE_DATE);
+}
+
 function matchesStage(item: Product, stage: StageKey): boolean {
   const status = item.stockStatus ?? '';
   if (stage === 'history') return isSoldItem(item);
@@ -110,7 +116,7 @@ function matchesStage(item: Product, stage: StageKey): boolean {
 
 export default function StagePanel({ stage, items, loading, identity, onSaved }: Props) {
   const config = CONFIG[stage];
-  const [saleFilter, setSaleFilter] = useState<SaleFilter>('ready');
+  const [saleFilter, setSaleFilter] = useState<SaleFilter>('sold');
   const [selling, setSelling] = useState<Product | null>(null);
   const [notice, setNotice] = useState('');
 
@@ -122,12 +128,22 @@ export default function StagePanel({ stage, items, loading, identity, onSaved }:
       return [...items].sort((a, b) => (a.addedAt < b.addedAt ? 1 : -1)).slice(0, 10);
     }
     if (stage === 'sale') {
-      const base =
-        saleFilter === 'sold'
-          ? items.filter(isSoldItem)
-          : saleFilter === 'all'
-            ? items
-            : items.filter((item) => !isSoldItem(item));
+      if (saleFilter === 'sold') {
+        // 판매 완료 목록은 판매일 최신순으로 보여 주고, 날짜가 없는 건은 뒤로 보냅니다.
+        return items
+          .filter(isSoldItem)
+          .sort((a, b) => {
+            const left = normalizeDate(saleDateOf(a));
+            const right = normalizeDate(saleDateOf(b));
+            if (!left && !right) return a.id < b.id ? 1 : -1;
+            if (!left) return 1;
+            if (!right) return -1;
+            if (left === right) return a.id < b.id ? 1 : -1;
+            return left < right ? 1 : -1;
+          })
+          .slice(0, LIST_LIMIT);
+      }
+      const base = saleFilter === 'all' ? items : items.filter((item) => !isSoldItem(item));
       return base.slice(0, LIST_LIMIT);
     }
     return items.filter((item) => matchesStage(item, stage)).slice(0, 10);
@@ -197,8 +213,8 @@ export default function StagePanel({ stage, items, loading, identity, onSaved }:
             {stage === 'sale' && (
               <div className="flex flex-wrap items-center gap-1.5">
                 {[
-                  { key: 'ready' as SaleFilter, label: `판매 대기 ${readyCount}` },
                   { key: 'sold' as SaleFilter, label: `판매 완료 ${soldCount}` },
+                  { key: 'ready' as SaleFilter, label: `판매 대기 ${readyCount}` },
                   { key: 'all' as SaleFilter, label: '전체' },
                 ].map((option) => (
                   <button
@@ -247,7 +263,9 @@ export default function StagePanel({ stage, items, loading, identity, onSaved }:
                       {product.name.en}
                     </p>
                     <p className="mt-0.5 truncate text-[10.5px] text-foreground-500">
-                      {product.id} · {product.brand} · {product.addedAt || '등록일 없음'}
+                      {product.id} · {product.brand} · {sold
+                        ? `판매 ${normalizeDate(saleDateOf(product)) || '일자 미기록'}`
+                        : product.addedAt || '등록일 없음'}
                     </p>
                   </div>
                   <span

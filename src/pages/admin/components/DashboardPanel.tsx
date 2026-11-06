@@ -4,6 +4,7 @@ import type { AdminTab } from '@/config/admin';
 import { SHEET_EDIT_URL } from '@/config/admin';
 import { formatKrw, formatThb, countStatus } from '@/pages/admin/utils';
 import { useFxRate } from '@/hooks/useFxRate';
+import { formatFxRate } from '@/services/fxRate';
 
 interface Props {
   items: Product[];
@@ -14,7 +15,7 @@ interface Props {
 }
 
 export default function DashboardPanel({ items, loading, error, onRetry, onTab }: Props) {
-  const { rate, auto, rateDate } = useFxRate();
+  const { rate, base, auto, rateDate } = useFxRate();
 
   const summary = useMemo(() => {
     const available = countStatus(items, '가능');
@@ -150,7 +151,7 @@ export default function DashboardPanel({ items, loading, error, onRetry, onTab }
               {formatThb(summary.totalThb)}
             </strong>
             <span className="text-[12px] text-foreground-600">
-              약 {formatKrw(summary.totalThb * rate)} · 1฿ = {rate}원
+              약 {formatKrw(summary.totalThb * rate)} · {formatFxRate(rate, base)}
               {auto && rateDate ? ` (${rateDate} 자동)` : ''}
             </span>
           </div>
