@@ -5,6 +5,7 @@ import { typeOptions } from '@/utils/products';
 import { WHOLESALE_RATE } from '@/config/admin';
 import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb, statusClass, wholesalePrice } from '@/pages/admin/utils';
+import FxRateControl from '@/pages/admin/components/FxRateControl';
 
 interface Props {
   items: Product[];
@@ -27,7 +28,7 @@ const TYPE_LABEL: Record<string, string> = {
 };
 
 export default function PartnerPanel({ items, loading, error, onRetry }: Props) {
-  const { rate, setRate } = useFxRate();
+  const { rate } = useFxRate();
   const [query, setQuery] = useState('');
   const [type, setType] = useState('all');
   const [status, setStatus] = useState('all');
@@ -80,14 +81,17 @@ export default function PartnerPanel({ items, loading, error, onRetry }: Props) 
             주세요.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={onRetry}
-          className="cursor-pointer whitespace-nowrap self-start rounded-md border border-background-300 bg-background-50 px-3.5 py-2 text-[12px] text-foreground-700 transition-colors hover:border-foreground-400"
-        >
-          <i className="ri-refresh-line mr-1"></i>
-          새로고침
-        </button>
+        <div className="flex flex-wrap items-center gap-2 self-start">
+          <FxRateControl />
+          <button
+            type="button"
+            onClick={onRetry}
+            className="cursor-pointer whitespace-nowrap self-start rounded-md border border-background-300 bg-background-50 px-3.5 py-2 text-[12px] text-foreground-700 transition-colors hover:border-foreground-400"
+          >
+            <i className="ri-refresh-line mr-1"></i>
+            새로고침
+          </button>
+        </div>
       </div>
 
       <div className="mt-5 grid grid-cols-2 gap-2.5 md:grid-cols-4">
@@ -172,18 +176,6 @@ export default function PartnerPanel({ items, loading, error, onRetry }: Props) 
             ))}
           </select>
 
-          <label className="flex items-center gap-1.5 whitespace-nowrap rounded-md border border-background-300 bg-background-100 px-2.5 py-2 text-[11.5px] text-foreground-600">
-            1฿ =
-            <input
-              type="number"
-              step={0.1}
-              value={rate}
-              onChange={(event) => setRate(Number(event.target.value))}
-              aria-label="원화 환율"
-              className="w-14 box-border rounded border border-background-300 bg-background-50 px-1.5 py-0.5 text-right text-[12px] text-foreground-900 outline-none focus:border-primary-500"
-            />
-            원
-          </label>
         </div>
       </div>
 

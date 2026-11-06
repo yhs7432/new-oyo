@@ -14,7 +14,7 @@ interface Props {
 }
 
 export default function DashboardPanel({ items, loading, error, onRetry, onTab }: Props) {
-  const { rate } = useFxRate();
+  const { rate, auto, rateDate } = useFxRate();
 
   const summary = useMemo(() => {
     const available = countStatus(items, '가능');
@@ -151,6 +151,7 @@ export default function DashboardPanel({ items, loading, error, onRetry, onTab }
             </strong>
             <span className="text-[12px] text-foreground-600">
               약 {formatKrw(summary.totalThb * rate)} · 1฿ = {rate}원
+              {auto && rateDate ? ` (${rateDate} 자동)` : ''}
             </span>
           </div>
           <p className="mt-1.5 text-[11px] text-foreground-500">

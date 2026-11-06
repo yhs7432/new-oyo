@@ -4,6 +4,7 @@ import { formatKrw, formatThb } from '@/pages/admin/utils';
 import { useFxRate } from '@/hooks/useFxRate';
 import {
   isRangeActive,
+  lockedRateCount,
   monthlySettlement,
   outOfRangeCount,
   totalSettlement,
@@ -24,7 +25,7 @@ interface Props {
  * 처음 화면과 판매·출고 화면에서 같은 기준으로 재사용한다.
  */
 export default function SettlementSection({ items }: Props) {
-  const { rate } = useFxRate();
+  const { rate, auto, rateDate } = useFxRate();
   const [rawRange, setRawRange] = useState<DateRange>({ from: '', to: '' });
 
   const range = useMemo<DateRange>(() => {
@@ -39,6 +40,7 @@ export default function SettlementSection({ items }: Props) {
   const monthly = useMemo(() => monthlySettlement(items, rate, range), [items, rate, range]);
   const excluded = useMemo(() => outOfRangeCount(items, range), [items, range]);
   const undated = useMemo(() => undatedSoldCount(items), [items]);
+  const lockedCount = useMemo(() => lockedRateCount(items, range), [items, range]);
 
   return (
     <div>
@@ -58,9 +60,16 @@ export default function SettlementSection({ items }: Props) {
               {rangeActive ? rangeLabel(range) : '전체 기간'}
             </span>
           </p>
-          <span className="rounded-full bg-secondary-100 px-2 py-0.5 text-[10px] text-secondary-900">
-            원가·VAT·수수료 자동 반영
-          </span>
+          <div className="flex flex-wrap items-center justify-end gap-1.5">
+            {lockedCount > 0 && (
+              <span className="rounded-full bg-accent-100 px-2 py-0.5 text-[10px] text-accent-900">
+                판매 시점 환율 고정 {lockedCount}건
+              </span>
+            )}
+            <span className="rounded-full bg-secondary-100 px-2 py-0.5 text-[10px] text-secondary-900">
+              원가·VAT·수수료 자동 반영
+            </span>
+          </div>
         </div>
         <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <div className="min-w-0">
@@ -103,9 +112,13 @@ export default function SettlementSection({ items }: Props) {
           </div>
         </div>
         <p className="mt-3 border-t border-background-200 pt-2.5 text-[10.5px] leading-relaxed text-foreground-500">
-          판매 완료 상품의 원가를 THB로 환산하고, 상품별 VAT(판매가의 %)와 웹 수수료(바트 금액)를
-          빼서 계산합니다. 마진율은 (순수익 ÷ 판매가 합계) 기준입니다. 두 값은 상품 수정 화면에서
-          상품마다 입력할 수 있습니다.
+          원가는 각 판매 건의 <strong className="font-medium text-foreground-700">판매 완료 시점
+          환율</strong>로 환산합니다. 판매 당시 환율이 함께 저장되어 있으면 이후 환율이 올라도 그
+          건은 그날 값으로 고정되고, 예전에 기록된 건만 현재 환율(
+          <strong className="font-medium text-foreground-700">1฿ = {rate}원</strong>
+          {auto ? ` · ${rateDate || '오늘'} 자동 조회` : ' · 직접 입력'})로 계산합니다. 상품별
+          VAT(판매가의 %)와 웹 수수료(바트 금액)를 빼서 순수익을 구하고, 마진율은 (순수익 ÷
+          판매가 합계) 기준입니다.
         </p>
       </div>
 

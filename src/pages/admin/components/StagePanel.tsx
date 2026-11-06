@@ -162,7 +162,7 @@ export default function StagePanel({ stage, items, loading, identity }: Props) {
         <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-accent-900">
           <i className="ri-information-line mt-0.5 text-[14px]"></i>
           {stage === 'sale'
-            ? '판매 완료로 저장하면 재고 목록에서는 숨겨지고, 판매 기록은 시트의 ‘판매 완료’ 탭에 자동으로 한 줄씩 남습니다. 잘못 입력했다면 같은 상품을 다시 열어 고칠 수 있습니다.'
+            ? '판매 완료로 저장하면 재고 목록에서는 숨겨지고, 판매 기록은 시트의 ‘판매 완료’ 탭에 자동으로 한 줄씩 남습니다. 그 시점의 환율도 함께 저장되어 이후 환율이 올라도 이 건의 정산은 그 값으로 유지됩니다. 잘못 입력했다면 같은 상품을 다시 열어 고칠 수 있습니다.'
             : '이 단계의 상태 변경은 “현재 재고” 화면에서 상품을 열어 수정·저장하면 시트에 기록됩니다. 박스·운송장 같은 세부 메모는 시트에서 직접 적어 주세요.'}
         </p>
       </div>

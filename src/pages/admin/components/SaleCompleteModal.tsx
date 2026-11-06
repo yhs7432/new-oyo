@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { Product } from '@/types/product';
 import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb, todayIso } from '@/pages/admin/utils';
@@ -7,9 +7,11 @@ import {
   CATEGORY_LABEL,
   FEE_RATE,
   FEE_RATE_LEGACY,
+  FX_RATE,
   SALE_DATE,
   VAT_RATE,
   noteAmount,
+  noteFxRate,
   noteRate,
   readNoteValue,
   writeNoteValue,
@@ -56,9 +58,23 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
   const [state, setState] = useState<SaveState>('idle');
   const [message, setMessage] = useState('');
 
+  /** 이미 판매 완료로 기록된 상품은 그때 고정된 환율을 그대로 이어서 씁니다. */
+  const storedRate = (product.stockStatus ?? '').includes('완료') ? noteFxRate(note) : 0;
+  const [fxRate, setFxRate] = useState(String(storedRate > 0 ? storedRate : rate));
+  const [fxTouched, setFxTouched] = useState(false);
+
+  // 오늘 환율을 아직 불러오는 중이었다면, 도착한 값으로 한 번 맞춰 줍니다.
+  useEffect(() => {
+    if (fxTouched || storedRate > 0) return;
+    setFxRate(String(rate));
+  }, [rate, fxTouched, storedRate]);
+
+  const fxRateValue = Number(fxRate.replace(/[^0-9.]/g, '')) || 0;
+  const appliedRate = fxRateValue > 0 ? fxRateValue : rate;
+
   const saleThb = Number(price.replace(/[^0-9.-]/g, '')) || 0;
   const costKrw = Number(String(raw['한국원가(KRW)'] ?? '').replace(/[^0-9]/g, '')) || 0;
-  const costThb = rate > 0 ? costKrw / rate : 0;
+  const costThb = appliedRate > 0 ? costKrw / appliedRate : 0;
   const vatRateValue = Math.min(100, Number(vat) || 0);
   const vatAmount = (saleThb * vatRateValue) / 100;
   const feeAmount = Number(fee.replace(/[^0-9.]/g, '')) || 0;
@@ -78,7 +94,13 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
     const withVat = writeNoteValue(note, VAT_RATE, vatRateValue > 0 ? String(vatRateValue) : null);
     const withFee = writeNoteValue(withVat, FEE_RATE, feeAmount > 0 ? String(feeAmount) : null);
     const withDate = writeNoteValue(withFee, SALE_DATE, saleDate || null);
-    const finalNote = writeNoteValue(withDate, FEE_RATE_LEGACY, null);
+    const withoutLegacy = writeNoteValue(withDate, FEE_RATE_LEGACY, null);
+    // 판매 완료 시점의 환율을 이 판매 건에 고정해서 남깁니다.
+    const finalNote = writeNoteValue(
+      withoutLegacy,
+      FX_RATE,
+      appliedRate > 0 ? String(appliedRate) : null,
+    );
 
     const update = await updateSheetRows([
       {
@@ -111,6 +133,7 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
       'VAT(THB)': Math.round(vatAmount),
       '웹수수료(THB)': Math.round(feeAmount),
       '순수익(THB)': Math.round(netThb),
+      환율: appliedRate,
       판매채널: channel,
       담당자: staffName,
       메모: memo.trim(),
@@ -162,7 +185,9 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
                 {product.brand} · {product.spec}
               </p>
               <p className="mt-1 text-[10.5px] text-foreground-500">
-                저장하면 홈페이지에서 숨겨지고, 같은 내용이 시트의 ‘판매 완료’ 탭에 한 줄로 남습니다.
+                저장하면 홈페이지에서 숨겨지고, 같은 내용이 시트의 ‘판매 완료’ 탭에 한 줄로
+                남습니다. 이때 정산 환율도 함께 고정되어 이후 환율이 올라도 이 건은 영향을 받지
+                않습니다.
               </p>
             </div>
           </div>
@@ -191,6 +216,29 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
                 placeholder="예: 8900"
                 className="w-full box-border rounded-md border border-background-300 bg-background-100 px-3 py-2 text-right text-sm text-foreground-900 outline-none focus:border-primary-500"
               />
+            </label>
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-foreground-500">
+                정산 환율 (원 / 1฿)
+              </span>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={fxRate}
+                onChange={(event) => {
+                  setFxTouched(true);
+                  setFxRate(event.target.value.replace(/[^0-9.]/g, ''));
+                }}
+                placeholder="예: 40.2"
+                className="w-full box-border rounded-md border border-background-300 bg-background-100 px-3 py-2 text-right text-sm text-foreground-900 outline-none focus:border-primary-500"
+              />
+              <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
+                {storedRate > 0
+                  ? `판매 당시 저장된 ${storedRate}원을 그대로 씁니다.`
+                  : (product.stockStatus ?? '').includes('완료')
+                    ? '판매 당시 환율 기록이 없어 오늘 환율로 채웁니다. 저장하면 이 값으로 고정됩니다.'
+                    : '저장하면 이 환율로 고정됩니다.'}
+              </span>
             </label>
             <label className="block min-w-0">
               <span className="mb-1.5 block text-[10px] uppercase tracking-[0.16em] text-foreground-500">
@@ -269,13 +317,18 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
                 <dd className="text-foreground-900">
                   {formatThb(saleThb)}
                   <span className="ml-1 text-[10.5px] text-foreground-500">
-                    / {formatKrw(saleThb * rate)}
+                    / {formatKrw(saleThb * appliedRate)}
                   </span>
                 </dd>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <dt className="text-foreground-600">원가</dt>
-                <dd className="text-foreground-900">− {formatThb(costThb)}</dd>
+                <dd className="text-foreground-900">
+                  − {formatThb(costThb)}
+                  <span className="ml-1 text-[10.5px] text-foreground-500">
+                    (1฿ = {appliedRate}원 고정)
+                  </span>
+                </dd>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <dt className="text-foreground-600">VAT ({vatRateValue}%)</dt>

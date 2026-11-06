@@ -15,12 +15,14 @@ import {
 import {
   FEE_RATE,
   FEE_RATE_LEGACY,
+  FX_RATE,
   SALE_DATE,
   SPECIAL_FLAG,
   SPECIAL_PRICE,
   VAT_RATE,
   isClubType,
   isSpecial,
+  noteFxRate,
   readNoteValue,
   writeNoteValue,
 } from '@/utils/sheetNote';
@@ -105,7 +107,12 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const vatRateValue = Math.min(100, Number(vat) || 0);
   const feeBahtValue = Number(String(fee).replace(/[^0-9.]/g, '')) || 0;
   const costKrw = Number(String(cost).replace(/[^0-9]/g, '')) || 0;
-  const costThb = rate > 0 ? costKrw / rate : 0;
+  // 판매 완료 시점에 고정된 환율이 있으면 그 값으로 계산합니다.
+  const savedFxRate = (raw['재고상태'] ?? product.stockStatus ?? '').includes('완료')
+    ? noteFxRate(originalNote)
+    : 0;
+  const settlementRate = savedFxRate > 0 ? savedFxRate : rate;
+  const costThb = settlementRate > 0 ? costKrw / settlementRate : 0;
   const vatAmount = (parsedPrice * vatRateValue) / 100;
   const feeAmount = feeBahtValue;
   const feeSharePercent =
@@ -164,10 +171,17 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
       SALE_DATE,
       saleDate ? saleDate : null,
     );
-    const finalNote = writeNoteValue(
+    const noteWithFee = writeNoteValue(
       noteWithDate,
       FEE_RATE,
       feeBahtValue > 0 ? String(feeBahtValue) : null,
+    );
+    // 판매 완료로 저장할 때 환율을 함께 고정합니다(이미 고정된 건은 그 값을 유지).
+    const rateToFreeze = savedFxRate > 0 ? savedFxRate : rate;
+    const finalNote = writeNoteValue(
+      noteWithFee,
+      FX_RATE,
+      isSoldStatus(stockStatus) && rateToFreeze > 0 ? String(rateToFreeze) : null,
     );
     const fields: Record<string, string | number> = {
       브랜드: brand.trim(),
@@ -520,7 +534,11 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                     : 'bg-secondary-100 text-secondary-900'
                 }`}
               >
-                {isSold ? '판매 완료 기준' : '판매 시 자동 계산'}
+                {isSold
+                  ? savedFxRate > 0
+                    ? `판매 시점 환율 고정 · 1฿ = ${savedFxRate}원`
+                    : '판매 완료 기준'
+                  : '판매 시 자동 계산'}
               </span>
             </div>
 
@@ -530,7 +548,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                 <dd className="text-foreground-900">
                   {formatThb(parsedPrice)}
                   <span className="ml-1 text-[10.5px] text-foreground-500">
-                    / {formatKrw(parsedPrice * rate)}
+                    / {formatKrw(parsedPrice * settlementRate)}
                   </span>
                 </dd>
               </div>
@@ -540,6 +558,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                   − {formatThb(costThb)}
                   <span className="ml-1 text-[10.5px] text-foreground-500">
                     / {formatKrw(costKrw)}
+                    {savedFxRate > 0 ? ` · 1฿ = ${savedFxRate}원 고정` : ''}
                   </span>
                 </dd>
               </div>
@@ -575,7 +594,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                   {formatThb(netThb)}
                 </strong>
                 <span className="ml-1.5 text-[10.5px] text-foreground-500">
-                  {formatKrw(netThb * rate)} · 마진 {marginPercent}%
+                  {formatKrw(netThb * settlementRate)} · 마진 {marginPercent}%
                 </span>
               </span>
             </div>
@@ -600,7 +619,8 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             </div>
             <p className="mt-2 text-[10.5px] leading-relaxed text-foreground-500">
               순수익 = 판매가 − 원가(THB 환산) − VAT(판매가의 %) − 웹 수수료(바트 직접 입력). 금액을
-              바꾸면 바로 다시 계산됩니다.
+              바꾸면 바로 다시 계산됩니다. 판매 완료로 저장하면 그 시점 환율이 함께 고정되어, 이후
+              환율이 올라도 이 상품의 원가는 바뀌지 않습니다.
             </p>
           </div>
 

@@ -17,7 +17,8 @@ var TOKEN = 'oyogolf-sheet-2026';
 
 var ARCHIVE_HEADERS = [
   '판매일', '기록시각', '재고번호', '상품명', '브랜드', '카테고리', '중고등급', '상태(%)',
-  '판매가(THB)', '원가(KRW)', 'VAT(THB)', '웹수수료(THB)', '순수익(THB)', '판매채널', '담당자', '메모'
+  '판매가(THB)', '원가(KRW)', 'VAT(THB)', '웹수수료(THB)', '순수익(THB)', '판매채널', '담당자', '메모',
+  '환율'
 ];
 
 function mainSheet_() {
@@ -251,6 +252,22 @@ function archiveSheet_() {
   if (sheet.getLastRow() === 0) {
     sheet.appendRow(ARCHIVE_HEADERS);
     sheet.setFrozenRows(1);
+  } else {
+    // 나중에 추가된 열(환율 등)이 없으면 머리글 오른쪽 끝에 이어 붙입니다.
+    var lastCol = Math.max(sheet.getLastColumn(), 1);
+    var head = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+    var existing = {};
+    for (var i = 0; i < head.length; i += 1) {
+      var name = String(head[i]).trim();
+      if (name) existing[name] = true;
+    }
+    var missing = [];
+    for (var h = 0; h < ARCHIVE_HEADERS.length; h += 1) {
+      if (!existing[ARCHIVE_HEADERS[h]]) missing.push(ARCHIVE_HEADERS[h]);
+    }
+    if (missing.length > 0) {
+      sheet.getRange(1, lastCol + 1, 1, missing.length).setValues([missing]);
+    }
   }
   return sheet;
 }

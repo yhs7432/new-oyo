@@ -21,6 +21,12 @@ export const FEE_RATE = '웹수수료';
 export const FEE_RATE_LEGACY = '바트 직접 입력';
 /** Sale date, stored in 비고 as `판매일:2026-11-05`. */
 export const SALE_DATE = '판매일';
+/**
+ * 정산 환율(1바트 = ?원)은 판매 완료를 저장한 그 시점 값으로 고정해서 비고에 남깁니다.
+ *   환율:40.2
+ * 나중에 환율이 올라도 이미 판매한 건은 이 값으로만 원가를 환산합니다.
+ */
+export const FX_RATE = '환율';
 
 /** Club types — everything else (bag, accessories) belongs to 액세서리. */
 const CLUB_TYPES: ProductType[] = ['driver', 'wood', 'iron', 'utility', 'wedge', 'putter'];
@@ -87,6 +93,14 @@ export function noteAmount(note: string, key: string, legacyKey?: string): numbe
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) return 0;
   return value;
+}
+
+/** 판매 완료 시점에 고정된 정산 환율. 기록이 없으면 0. */
+export function noteFxRate(note: string): number {
+  const raw = readNoteValue(note, FX_RATE).replace(/[^0-9.]/g, '');
+  if (!raw) return 0;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 /**

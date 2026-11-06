@@ -5,6 +5,7 @@ import {
   SALE_DATE,
   VAT_RATE,
   noteAmount,
+  noteFxRate,
   noteRate,
   readNoteValue,
 } from '@/utils/sheetNote';
@@ -38,6 +39,10 @@ export interface SettledItem {
   charges: number;
   net: number;
   marginPercent: number;
+  /** 이 판매 건에 실제로 적용된 환율(1바트 = ?원). */
+  rate: number;
+  /** 판매 완료 시점 환율이 고정 저장된 건이면 true. */
+  rateLocked: boolean;
 }
 
 interface Row {
@@ -107,7 +112,10 @@ export function settlementOf(item: Product, rate: number): SettledItem {
   const note = noteOf(item);
   const saleThb = item.priceOnRequest ? 0 : item.price;
   const costKrw = Number(String(item.raw?.['한국원가(KRW)'] ?? '').replace(/[^0-9]/g, '')) || 0;
-  const cost = rate > 0 ? costKrw / rate : 0;
+  // 판매 완료 시점에 저장된 환율이 있으면 그 값으로만 환산합니다.
+  const lockedRate = noteFxRate(note);
+  const appliedRate = lockedRate > 0 ? lockedRate : rate;
+  const cost = appliedRate > 0 ? costKrw / appliedRate : 0;
   const vat = (saleThb * noteRate(note, VAT_RATE)) / 100;
   const fee = noteAmount(note, FEE_RATE, FEE_RATE_LEGACY);
   const charges = vat + fee;
@@ -122,7 +130,19 @@ export function settlementOf(item: Product, rate: number): SettledItem {
     charges,
     net,
     marginPercent: saleThb > 0 ? Math.round((net / saleThb) * 1000) / 10 : 0,
+    rate: appliedRate,
+    rateLocked: lockedRate > 0,
   };
+}
+
+/** 판매 완료 시점 환율이 고정된 판매 건 수(선택 기간 기준). */
+export function lockedRateCount(items: Product[], range: DateRange | null = null): number {
+  return items.filter(
+    (item) =>
+      isSoldItem(item) &&
+      inDateRange(readNoteValue(noteOf(item), SALE_DATE), range) &&
+      noteFxRate(noteOf(item)) > 0,
+  ).length;
 }
 
 /** Sold products with no readable sale date. */
