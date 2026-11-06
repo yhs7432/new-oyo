@@ -136,6 +136,8 @@ export default {
     thb: 'บาท',
     stock: 'คงเหลือ',
     condition: 'เกรดสภาพสินค้า',
+    conditionPanel: 'สภาพสินค้า',
+    grade: 'เกรด',
     head: 'หัวไม้',
     shaft: 'ก้าน',
     grip: 'กริป',

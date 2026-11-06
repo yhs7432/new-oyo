@@ -106,14 +106,13 @@ export default function ProductDetailPage() {
   const reserved = product.stockStatus === '예약';
   const missingPhoto = !hasPhoto(product);
   const gradeRows = [
-    { key: 'head', value: product.headGrade },
-    { key: 'shaft', value: product.shaftGrade },
-    { key: 'grip', value: product.gripGrade },
+    { key: 'grade', label: t('product.grade'), value: product.headGrade },
+    { key: 'shaft', label: t('product.shaft'), value: product.shaftGrade },
+    { key: 'grip', label: t('product.grip'), value: product.gripGrade },
   ].filter((row) => Boolean(row.value));
 
   const specRows = [
     { key: 'type', value: t(`types.${product.type}`) },
-    ...(product.category === 'accessories' ? [] : [{ key: 'flex', value: product.flex ?? '—' }]),
     { key: 'spec', value: product.spec },
     { key: 'location', value: t(`locations.${product.location}`) },
     { key: 'stock', value: String(stockTotal) },
@@ -271,42 +270,34 @@ export default function ProductDetailPage() {
                   )}
                 </div>
 
-                {product.description && (
-                  <p className="mt-5 rounded-lg border border-background-200 bg-background-100/70 px-4 py-3 text-[12.5px] leading-relaxed text-foreground-600">
-                    {product.description}
-                  </p>
-                )}
-
-                {gradeRows.length > 0 && (
-                  <div className="mt-7">
-                    <p className="text-[10px] uppercase tracking-[0.18em] text-foreground-500">
-                      {t('product.condition')}
-                    </p>
-                    <div className="mt-3 grid grid-cols-3 gap-2">
-                      {gradeRows.map((row, index) => (
-                        <div
-                          key={row.key}
-                          className={`rounded-lg border px-3 py-3 text-center ${
-                            index === 0
-                              ? 'border-primary-300 bg-primary-50'
-                              : 'border-background-200 bg-background-100'
-                          }`}
-                        >
-                          <span className="block text-[10px] uppercase tracking-[0.12em] text-foreground-500">
-                            {t(`product.${row.key}`)}
-                          </span>
-                          <strong className="mt-1 block font-heading text-[18px] font-normal text-foreground-950">
-                            {row.value}
-                          </strong>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
                 <dl className="mt-7 divide-y divide-background-200 border-y border-background-200">
+                  {gradeRows.map((row, index) => (
+                    <div
+                      key={row.key}
+                      className={`flex items-center justify-between gap-4 px-3 py-2.5 ${
+                        index === 0 ? 'bg-primary-50/70' : ''
+                      }`}
+                    >
+                      <dt
+                        className={`text-[11.5px] uppercase tracking-[0.1em] ${
+                          index === 0 ? 'text-primary-800' : 'text-foreground-500'
+                        }`}
+                      >
+                        {row.label}
+                      </dt>
+                      <dd
+                        className={`text-right ${
+                          index === 0
+                            ? 'text-[13px] font-semibold text-foreground-950'
+                            : 'text-[12.5px] text-foreground-800'
+                        }`}
+                      >
+                        {row.value}
+                      </dd>
+                    </div>
+                  ))}
                   {specRows.map((row) => (
-                    <div key={row.key} className="flex items-center justify-between gap-4 py-2.5">
+                    <div key={row.key} className="flex items-center justify-between gap-4 px-3 py-2.5">
                       <dt className="text-[11.5px] uppercase tracking-[0.1em] text-foreground-500">
                         {t(`product.${row.key}`)}
                       </dt>
@@ -314,7 +305,7 @@ export default function ProductDetailPage() {
                     </div>
                   ))}
                   {typeof product.conditionPercent === 'number' && (
-                    <div className="flex items-center justify-between gap-4 py-2.5">
+                    <div className="flex items-center justify-between gap-4 px-3 py-2.5">
                       <dt className="text-[11.5px] uppercase tracking-[0.1em] text-foreground-500">
                         {t('product.conditionPercent')}
                       </dt>
@@ -324,7 +315,7 @@ export default function ProductDetailPage() {
                     </div>
                   )}
                   {typeof product.headCoverIncluded === 'boolean' && (
-                    <div className="flex items-center justify-between gap-4 py-2.5">
+                    <div className="flex items-center justify-between gap-4 px-3 py-2.5">
                       <dt className="text-[11.5px] uppercase tracking-[0.1em] text-foreground-500">
                         {t('product.headCover')}
                       </dt>
@@ -333,7 +324,7 @@ export default function ProductDetailPage() {
                       </dd>
                     </div>
                   )}
-                  <div className="flex items-center justify-between gap-4 py-2.5">
+                  <div className="flex items-center justify-between gap-4 px-3 py-2.5">
                     <dt className="text-[11.5px] uppercase tracking-[0.1em] text-foreground-500">
                       {t('product.sku')}
                     </dt>

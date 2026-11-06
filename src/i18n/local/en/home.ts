@@ -136,6 +136,8 @@ export default {
     thb: 'THB',
     stock: 'In stock',
     condition: 'Condition grades',
+    conditionPanel: 'Product condition',
+    grade: 'Grade',
     head: 'Head',
     shaft: 'Shaft',
     grip: 'Grip',

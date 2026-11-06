@@ -136,6 +136,8 @@ export default {
     thb: 'THB',
     stock: '재고',
     condition: '상태 등급',
+    conditionPanel: '상품 상태',
+    grade: '등급',
     head: '헤드',
     shaft: '샤프트',
     grip: '그립',
