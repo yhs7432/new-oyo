@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
-import { supabase } from '@/services/supabase';
+import { isBackendConfigured, supabase } from '@/services/supabase';
 import type { AdminIdentity, AdminRole } from '@/config/admin';
 import { ROLE_OPTIONS } from '@/config/admin';
 
@@ -43,8 +43,30 @@ function toAdminUser(user: User | null): AdminUser | null {
   };
 }
 
+const NETWORK_MESSAGE =
+  '계정 서버에 연결하지 못했습니다. 인터넷 연결을 확인한 뒤 잠시 후 다시 시도해 주세요.';
+
+const NOT_CONFIGURED_MESSAGE =
+  '계정 서버 연결 정보가 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.';
+
+function isNetworkError(message: string): boolean {
+  const text = message.toLowerCase();
+  return (
+    text.includes('failed to fetch') ||
+    text.includes('networkerror') ||
+    text.includes('network error') ||
+    text.includes('load failed') ||
+    text.includes('network request failed') ||
+    text.includes('fetch failed')
+  );
+}
+
 function describeAuthError(message: string): string {
   const text = message.toLowerCase();
+  if (isNetworkError(message)) return NETWORK_MESSAGE;
+  if (text.includes('no api key') || text.includes('invalid api key')) {
+    return '계정 서버 인증 정보가 맞지 않습니다. 관리자에게 연결 상태를 확인해 달라고 알려 주세요.';
+  }
   if (text.includes('invalid login credentials')) return '이메일 또는 비밀번호가 맞지 않습니다.';
   if (text.includes('email not confirmed')) {
     return '이메일 확인이 아직 끝나지 않았습니다. 받은 편지함의 확인 링크를 먼저 눌러 주세요.';
@@ -94,6 +116,7 @@ export function useAdminAuth() {
   }, []);
 
   const signIn = useCallback(async ({ email, password }: SignInPayload): Promise<AuthResult> => {
+    if (!isBackendConfigured) return { ok: false, message: NOT_CONFIGURED_MESSAGE };
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email: email.trim(),
@@ -101,13 +124,18 @@ export function useAdminAuth() {
       });
       if (error) return { ok: false, message: describeAuthError(error.message) };
       return { ok: true };
-    } catch {
-      return { ok: false, message: '로그인 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.' };
+    } catch (caught) {
+      const detail = caught instanceof Error ? caught.message : '';
+      return {
+        ok: false,
+        message: isNetworkError(detail) ? NETWORK_MESSAGE : '로그인 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.',
+      };
     }
   }, []);
 
   const signUp = useCallback(
     async ({ email, password, name, role }: SignUpPayload): Promise<AuthResult> => {
+      if (!isBackendConfigured) return { ok: false, message: NOT_CONFIGURED_MESSAGE };
       try {
         const { data, error } = await supabase.auth.signUp({
           email: email.trim(),
@@ -125,8 +153,14 @@ export function useAdminAuth() {
           };
         }
         return { ok: true };
-      } catch {
-        return { ok: false, message: '가입 처리 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.' };
+      } catch (caught) {
+        const detail = caught instanceof Error ? caught.message : '';
+        return {
+          ok: false,
+          message: isNetworkError(detail)
+            ? NETWORK_MESSAGE
+            : '가입 처리 중 문제가 생겼습니다. 잠시 후 다시 시도해 주세요.',
+        };
       }
     },
     [],

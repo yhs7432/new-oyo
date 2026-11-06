@@ -28,6 +28,13 @@ export default function AdminLogin({ onSignIn, onSignUp }: Props) {
   const [name, setName] = useState('');
   const [code, setCode] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showPassword2, setShowPassword2] = useState(false);
+  const [showCode, setShowCode] = useState(false);
+
+  const passwordFilled = password.length > 0;
+  const confirmFilled = password2.length > 0;
+  const passwordMatch = passwordFilled && confirmFilled && password === password2;
+  const passwordMismatch = confirmFilled && password !== password2;
 
   const switchMode = (next: Mode) => {
     setMode(next);
@@ -35,6 +42,9 @@ export default function AdminLogin({ onSignIn, onSignUp }: Props) {
     setNotice('');
     setPassword('');
     setPassword2('');
+    setShowPassword(false);
+    setShowPassword2(false);
+    setShowCode(false);
   };
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
@@ -234,19 +244,29 @@ export default function AdminLogin({ onSignIn, onSignUp }: Props) {
                   </label>
                   <label className="block min-w-0 flex-1">
                     <span className={labelClass}>가입 코드 (4자리)</span>
-                    <input
-                      type="password"
-                      name="invite_code"
-                      inputMode="numeric"
-                      maxLength={4}
-                      required
-                      value={code}
-                      onChange={(event) =>
-                        setCode(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))
-                      }
-                      placeholder="••••"
-                      className={`${inputClass} tracking-[0.4em]`}
-                    />
+                    <span className="relative block">
+                      <input
+                        type={showCode ? 'text' : 'password'}
+                        name="invite_code"
+                        inputMode="numeric"
+                        maxLength={4}
+                        required
+                        value={code}
+                        onChange={(event) =>
+                          setCode(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))
+                        }
+                        placeholder="••••"
+                        className={`${inputClass} pr-10 tracking-[0.4em]`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCode((prev) => !prev)}
+                        aria-label="가입 코드 표시 전환"
+                        className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-[14px] text-foreground-500 transition-colors hover:text-foreground-900"
+                      >
+                        <i className={showCode ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                      </button>
+                    </span>
                   </label>
                 </div>
 
@@ -273,31 +293,75 @@ export default function AdminLogin({ onSignIn, onSignUp }: Props) {
                 <div className="flex flex-col gap-3 sm:flex-row">
                   <label className="block min-w-0 flex-1">
                     <span className={labelClass}>비밀번호 (8자 이상)</span>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password"
-                      autoComplete="new-password"
-                      required
-                      value={password}
-                      onChange={(event) => setPassword(event.target.value)}
-                      placeholder="••••••••"
-                      className={inputClass}
-                    />
+                    <span className="relative block">
+                      <input
+                        type={showPassword ? 'text' : 'password'}
+                        name="password"
+                        autoComplete="new-password"
+                        required
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder="••••••••"
+                        className={`${inputClass} pr-10`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        aria-label="비밀번호 표시 전환"
+                        className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-[14px] text-foreground-500 transition-colors hover:text-foreground-900"
+                      >
+                        <i className={showPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                      </button>
+                    </span>
                   </label>
                   <label className="block min-w-0 flex-1">
                     <span className={labelClass}>비밀번호 확인</span>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      name="password_confirm"
-                      autoComplete="new-password"
-                      required
-                      value={password2}
-                      onChange={(event) => setPassword2(event.target.value)}
-                      placeholder="••••••••"
-                      className={inputClass}
-                    />
+                    <span className="relative block">
+                      <input
+                        type={showPassword2 ? 'text' : 'password'}
+                        name="password_confirm"
+                        autoComplete="new-password"
+                        required
+                        value={password2}
+                        onChange={(event) => setPassword2(event.target.value)}
+                        placeholder="••••••••"
+                        className={`${inputClass} pr-10 ${
+                          passwordMatch
+                            ? 'border-emerald-500 focus:border-emerald-500'
+                            : passwordMismatch
+                              ? 'border-accent-400'
+                              : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword2((prev) => !prev)}
+                        aria-label="비밀번호 확인 표시 전환"
+                        className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-[14px] text-foreground-500 transition-colors hover:text-foreground-900"
+                      >
+                        <i className={showPassword2 ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                      </button>
+                    </span>
+                    {passwordMatch && (
+                      <span className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-emerald-600">
+                        <i className="ri-check-line"></i>
+                        비밀번호가 일치합니다
+                      </span>
+                    )}
+                    {passwordMismatch && (
+                      <span className="mt-1.5 flex items-center gap-1 text-[11px] text-accent-700">
+                        <i className="ri-error-warning-line"></i>
+                        두 비밀번호가 아직 다릅니다
+                      </span>
+                    )}
                   </label>
                 </div>
+                {passwordFilled && password.length < 8 && (
+                  <span className="flex items-center gap-1 text-[11px] text-foreground-500">
+                    <i className="ri-information-line"></i>
+                    비밀번호는 8자 이상이어야 합니다
+                  </span>
+                )}
               </div>
 
               {error && (
