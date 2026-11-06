@@ -125,13 +125,17 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     grade !== (raw['중고등급'] ?? product.headGrade ?? '') ||
     condition !== (product.conditionPercent ? String(product.conditionPercent) : '') ||
     stockStatus !== (raw['재고상태'] ?? product.stockStatus ?? '판매 가능') ||
-    visible !== (raw['웹노출'] ?? 'Y') ||
+    effectiveVisible !== (raw['웹노출'] ?? 'Y') ||
     location !== (raw['보관위치'] ?? '') ||
     staff !== (raw['담당자'] ?? '') ||
     cover !== (raw['헤드커버'] ?? (product.headCoverIncluded ? '포함' : '미포함')) ||
     special !== initialSpecial ||
     specialPrice !== initialSpecialPrice ||
     mergeNotePhotos(originalNote, photoUrls) !== mergeNotePhotos(originalNote, parsePhotoUrls(originalNote));
+
+  /** 재고상태가 '판매 완료' 계열이면 웹노출은 항상 N으로 맞춥니다. */
+  const isSoldStatus = (status: string) => status.includes('완료');
+  const effectiveVisible = isSoldStatus(stockStatus) ? 'N' : visible;
 
   const save = async () => {
     setState('saving');
@@ -170,7 +174,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
       '상태(%)': conditionToSheet(condition),
       헤드커버: cover,
       재고상태: stockStatus,
-      웹노출: visible,
+      웹노출: effectiveVisible,
       보관위치: location.trim(),
       담당자: staff.trim(),
     };
@@ -346,8 +350,15 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                 value={stockStatus}
                 onChange={(event) => {
                   const next = event.target.value;
+                  const wasSold = stockStatus.includes('완료');
                   setStockStatus(next);
-                  if (next.includes('완료') && !saleDate) setSaleDate(todayInput());
+                  if (next.includes('완료')) {
+                    if (!saleDate) setSaleDate(todayInput());
+                    setVisible('N');
+                  } else if (wasSold) {
+                    /* 판매 완료에서 되돌리면 웹노출도 자동으로 Y로 복구합니다. */
+                    setVisible('Y');
+                  }
                 }}
                 className={`${inputClass} cursor-pointer`}
               >
@@ -375,10 +386,20 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             </label>
             <label className="block min-w-0">
               <span className={labelClass}>웹노출</span>
-              <select value={visible} onChange={(event) => setVisible(event.target.value)} className={`${inputClass} cursor-pointer`}>
+              <select
+                value={effectiveVisible}
+                onChange={(event) => setVisible(event.target.value)}
+                disabled={isSoldStatus(stockStatus)}
+                className={`${inputClass} cursor-pointer disabled:cursor-not-allowed disabled:bg-background-200 disabled:text-foreground-600`}
+              >
                 <option value="Y">Y · 홈페이지 노출</option>
                 <option value="N">N · 숨김</option>
               </select>
+              <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
+                {isSoldStatus(stockStatus)
+                  ? '판매 완료 상품은 자동으로 숨김(N) 처리됩니다.'
+                  : '판매 완료로 바꾸면 자동으로 숨김(N), 판매 가능으로 되돌리면 자동으로 노출(Y)됩니다.'}
+              </span>
             </label>
             <label className="block min-w-0">
               <span className={labelClass}>보관위치</span>
@@ -569,7 +590,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             <div className="mt-1.5 flex items-center justify-between gap-2 text-[12px]">
               <span className="text-foreground-600">웹노출</span>
               <span className="text-foreground-900">
-                {visible === 'Y' ? '홈페이지에 표시됩니다' : '홈페이지에서 숨겨집니다'}
+                {effectiveVisible === 'Y' ? '홈페이지에 표시됩니다' : '홈페이지에서 숨겨집니다'}
               </span>
             </div>
             <p className="mt-2 text-[10.5px] leading-relaxed text-foreground-500">

@@ -58,6 +58,12 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
   };
 
   const toggleVisible = async (product: Product) => {
+    if (isSoldItem(product)) {
+      setNotice(
+        `${product.id} · 판매 완료 상품은 웹노출이 자동으로 N(숨김)으로 유지됩니다. 다시 노출하려면 “수정·저장”에서 재고상태를 판매 가능으로 바꿔 주세요. 저장하면 웹노출도 자동으로 Y로 복구됩니다.`,
+      );
+      return;
+    }
     const next = product.visible === false ? 'Y' : 'N';
     setBusyId(product.id);
     setNotice('');
@@ -378,13 +384,15 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                         <button
                           type="button"
                           onClick={() => void toggleVisible(product)}
-                          disabled={busyId === product.id || !isWriterReady()}
+                          disabled={busyId === product.id || !isWriterReady() || isSoldItem(product)}
                           title={
-                            isWriterReady()
-                              ? product.visible === false
-                                ? '홈페이지에 노출합니다'
-                                : '홈페이지에서 숨깁니다'
-                              : '시트 쓰기 연결 후 사용할 수 있습니다'
+                            isSoldItem(product)
+                              ? '판매 완료 상품은 자동으로 숨김 처리됩니다'
+                              : isWriterReady()
+                                ? product.visible === false
+                                  ? '홈페이지에 노출합니다'
+                                  : '홈페이지에서 숨깁니다'
+                                : '시트 쓰기 연결 후 사용할 수 있습니다'
                           }
                           className="cursor-pointer whitespace-nowrap rounded border border-background-300 px-2 py-1 text-[11px] text-foreground-800 transition-colors hover:border-foreground-400 disabled:cursor-not-allowed disabled:opacity-40"
                         >

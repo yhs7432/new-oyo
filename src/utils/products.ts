@@ -1,5 +1,6 @@
 import type { CategoryKey, Flex, LocalizedName, Product, ProductType } from '@/types/product';
 import { products } from '@/mocks/products';
+import { isSoldItem } from '@/utils/settlement';
 
 export const PAGE_SIZE = 20;
 
@@ -86,10 +87,11 @@ export function productsOf(category?: CategoryKey): Product[] {
 
 /**
  * 시트의 “웹노출”이 N 인 행은 관리자 화면에서만 다루고, 홈페이지에는 내보내지 않습니다.
+ * 재고상태가 판매 완료인 상품도 시트 값과 무관하게 항상 제외합니다.
  * mock 상품처럼 visible 값이 없는 경우는 노출로 봅니다.
  */
 export function visibleOnly(list: Product[]): Product[] {
-  return list.filter((product) => product.visible !== false);
+  return list.filter((product) => product.visible !== false && !isSoldItem(product));
 }
 
 export function brandsOf(list: Product[]): string[] {
