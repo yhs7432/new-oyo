@@ -94,6 +94,8 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
 
   const [state, setState] = useState<SaveState>('idle');
   const [channel, setChannel] = useState(SALE_CHANNELS[0]);
+  /** 판매 완료 시트의 ‘메모’ 칸에 들어갈 자유 메모입니다. */
+  const [memo, setMemo] = useState('');
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -158,6 +160,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     cover !== (raw['헤드커버'] ?? (product.headCoverIncluded ? '포함' : '미포함')) ||
     special !== initialSpecial ||
     specialPrice !== initialSpecialPrice ||
+    memo.trim().length > 0 ||
     mergeNotePhotos(originalNote, photoUrls) !== mergeNotePhotos(originalNote, parsePhotoUrls(originalNote));
 
   const save = async () => {
@@ -236,7 +239,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
         환율: rateToFreeze,
         판매채널: channel,
         담당자: staff.trim(),
-        메모: '',
+        메모: memo.trim(),
       });
 
       if (!archive.ok) {
@@ -490,6 +493,22 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                 </select>
                 <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
                   판매 완료 시트에 이 채널로 기록됩니다.
+                </span>
+              </label>
+            )}
+            {isSoldStatus(stockStatus) && (
+              <label className="block min-w-0 sm:col-span-2">
+                <span className={labelClass}>메모 (판매 완료 시트)</span>
+                <input
+                  value={memo}
+                  onChange={(event) => setMemo(event.target.value)}
+                  maxLength={80}
+                  placeholder="예: 헤드커버 미포함, 매장 방문 판매"
+                  className={inputClass}
+                />
+                <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
+                  비워 두면 메모 없이 기록됩니다. 저장하면 ‘판매 완료’ 탭의 메모 칸에 그대로
+                  들어갑니다.
                 </span>
               </label>
             )}
