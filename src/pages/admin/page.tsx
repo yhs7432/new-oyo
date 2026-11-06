@@ -15,8 +15,16 @@ import { firstTabForRole, tabsForRole } from '@/config/admin';
 export default function AdminPage() {
   const { identity, loading: authLoading, signIn, signUp, signOut } = useAdminAuth();
   const [tab, setTab] = useState<AdminTab>('dashboard');
-  const { items, loading: catalogueLoading, error, reload } = useCatalogue({
+  const {
+    items,
+    loading: catalogueLoading,
+    refreshing,
+    lastSyncedAt,
+    error,
+    reload,
+  } = useCatalogue({
     enabled: Boolean(identity),
+    intervalMs: 60 * 1000,
   });
 
   const role = identity?.role;
@@ -62,7 +70,15 @@ export default function AdminPage() {
       case 'sale':
       case 'audit':
       case 'history':
-        return <StagePanel stage={activeTab} items={items} loading={catalogueLoading} identity={identity} />;
+        return (
+          <StagePanel
+            stage={activeTab}
+            items={items}
+            loading={catalogueLoading}
+            identity={identity}
+            onSaved={reload}
+          />
+        );
       case 'stock':
         return (
           <InventoryPanel
@@ -95,6 +111,9 @@ export default function AdminPage() {
       identity={identity}
       onTab={setTab}
       onLogout={signOut}
+      onRefresh={reload}
+      refreshing={refreshing}
+      lastSyncedAt={lastSyncedAt}
       total={items.length}
     >
       {renderPanel()}

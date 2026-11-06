@@ -126,15 +126,64 @@ function parseFlex(spec: string): Flex | undefined {
 }
 
 function parsePhotos(note: string): string[] {
-  const found = note.match(/https:\/\/drive\.google\.com\/thumbnail\?[^|\s]+/g) ?? [];
-  const ids = found
-    .map((url) => url.match(/[?&]id=([A-Za-z0-9_-]+)/)?.[1])
-    .filter((id): id is string => Boolean(id));
+  const segments = note
+    .split('|')
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
 
-  return Array.from(new Set(ids)).map(
+  /* "사진:" 처럼 이름표가 붙은 칸이 있으면 그것만 사진으로 봅니다.
+     (인보이스·배송 링크처럼 사진이 아닌 주소를 잘못 집어오지 않도록) */
+  const labelled = segments.filter((segment) => /^(사진|사진링크|이미지|이미지링크|photo|photos|image|images)\s*[:：]/i.test(segment));
+  const source = labelled.length > 0 ? labelled : segments;
+
+  return collectPhotoUrls(source.join(' '));
+}
+
+/** 한 셀 안의 주소들 중에서 "사진으로 쓸 수 있는 주소"만 골라 표준 썸네일 주소로 바꿉니다. */
+function collectPhotoUrls(text: string): string[] {
+  const urls = text.match(/https?:\/\/[^\s|"'<>]+/g) ?? [];
+  const driveIds: string[] = [];
+  const direct: string[] = [];
+
+  urls.forEach((raw) => {
+    const url = raw.replace(/[),.;]+$/, '');
+    const id = googleFileId(url);
+    if (id) {
+      driveIds.push(id);
+      return;
+    }
+    /* 드라이브가 아닌 일반 이미지 주소(jpg·png·webp 등)도 그대로 사용합니다. */
+    if (
+      /\.(jpe?g|png|webp|gif|avif)(\?|$)/i.test(url) ||
+      /(res\.cloudinary\.com|images\.unsplash\.com|i\.imgur\.com|cdn\.shopify\.com)/i.test(url)
+    ) {
+      direct.push(url);
+    }
+  });
+
+  const fromDrive = Array.from(new Set(driveIds)).map(
     (id) => `https://drive.google.com/thumbnail?id=${id}&sz=w1000`,
   );
+  return Array.from(new Set([...fromDrive, ...direct]));
 }
+
+/**
+ * 구글 드라이브 주소에서 파일 ID만 뽑습니다.
+ * - 썸네일 주소: https://drive.google.com/thumbnail?id=XXXX
+ * - 공유 주소:   https://drive.google.com/file/d/XXXX/view?usp=drive_link
+ * - 열기 주소:   https://drive.google.com/open?id=XXXX
+ */
+function googleFileId(url: string): string | undefined {
+  if (!/google\.com|googleusercontent\.com/i.test(url)) return undefined;
+  const byPath = url.match(/\/d\/([A-Za-z0-9_-]{10,})/);
+  if (byPath) return byPath[1];
+  const byQuery = url.match(/[?&]id=([A-Za-z0-9_-]{10,})/);
+  if (byQuery) return byQuery[1];
+  return undefined;
+}
+
+/** 시트에 사진 전용 칸이 따로 생겨도 읽을 수 있도록 이름을 모아 둡니다. */
+const PHOTO_COLUMNS = ['사진', '사진링크', '사진 링크', '이미지', '이미지링크', 'photo', 'photos', 'image', 'images'];
 
 /** 기존 넘버·기존 시트 행처럼 직원만 보면 되는 메모인지 판별합니다. */
 const INTERNAL_REF_PATTERN = /(기존\s*넘버|기존\s*번호|기존\s*시트|이전\s*시트|구\s*넘버|과거\s*시트)/i;
@@ -171,7 +220,12 @@ function mapRow(values: Record<string, string>, index: number): Product | null {
   const type = TYPE_MAP[rawType.toLowerCase()] ?? 'accessory';
   const spec = (values[COLUMN.spec] ?? '').trim();
   const note = values[COLUMN.note] ?? '';
-  const photos = parsePhotos(note);
+  const columnPhotoText = PHOTO_COLUMNS.map((key) => values[key] ?? '')
+    .filter((value) => value.trim().length > 0)
+    .join(' | ');
+  const photos = Array.from(
+    new Set([...collectPhotoUrls(columnPhotoText), ...parsePhotos(note)]),
+  );
   const gradeRaw = (values[COLUMN.grade] ?? '').trim().toUpperCase();
   const grade = GRADES.includes(gradeRaw as Grade) ? (gradeRaw as Grade) : undefined;
   const thb = toNumber(values[COLUMN.priceThb]);
@@ -233,23 +287,39 @@ export function mapSheetToProducts(csv: string): Product[] {
 }
 
 let cache: Product[] | null = null;
+let cacheAt = 0;
 let pending: Promise<Product[]> | null = null;
+
+/** 한 번 읽은 시트를 이 시간 동안은 다시 부르지 않습니다(탭 하나 기준). */
+const CACHE_TTL_MS = 45 * 1000;
+/** 강제 새로고침이라도 이 간격 안의 중복 요청은 하나로 합칩니다. */
+const MIN_GAP_MS = 3000;
+
+/** 마지막으로 시트를 읽어 온 시각(ms). 아직 읽지 않았으면 0. */
+export function catalogueSyncedAt(): number {
+  return cacheAt;
+}
 
 /** Drops the in-memory sheet cache so the next read picks up freshly written rows. */
 export function invalidateCatalogue(): void {
   cache = null;
+  cacheAt = 0;
   pending = null;
 }
 
 export async function fetchCatalogue(force = false): Promise<Product[]> {
-  if (!force && cache) return cache;
-  if (!force && pending) return pending;
+  if (cache) {
+    const age = Date.now() - cacheAt;
+    if (age < (force ? MIN_GAP_MS : CACHE_TTL_MS)) return cache;
+  }
+  if (pending) return pending;
 
   pending = (async () => {
-    const url = force ? `${SHEET_CSV_URL}&_=${Date.now()}` : SHEET_CSV_URL;
+    // 구글 CSV 응답도 브라우저·구글 쪽에 잠시 캐시되므로 매번 주소를 다르게 만듭니다.
+    const url = `${SHEET_CSV_URL}&_=${Date.now()}`;
     const response = await fetch(url, {
       headers: { Accept: 'text/csv' },
-      cache: force ? 'no-store' : 'default',
+      cache: 'no-store',
     });
     if (!response.ok) {
       throw new Error(`Sheet request failed (${response.status})`);
@@ -260,6 +330,7 @@ export async function fetchCatalogue(force = false): Promise<Product[]> {
       throw new Error('Sheet returned no products');
     }
     cache = items;
+    cacheAt = Date.now();
     return items;
   })();
 

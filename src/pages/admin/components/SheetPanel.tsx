@@ -36,7 +36,7 @@ export default function SheetPanel({ items, loading, error, onRetry }: Props) {
           <h1 className="font-heading text-2xl text-foreground-950">시트 연동</h1>
           <p className="mt-1.5 max-w-2xl text-[12.5px] leading-relaxed text-foreground-600">
             홈페이지와 관리자 화면은 같은 구글시트를 씁니다. 관리자에서 저장하면 시트에 기록되고,
-            시트에 기록된 값이 그대로 홈페이지에 나타납니다.
+            시트에서 직접 고친 값도 1분 안에 홈페이지와 관리자 화면에 자동으로 다시 반영됩니다.
           </p>
         </div>
         <a

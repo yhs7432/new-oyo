@@ -14,6 +14,8 @@ interface Props {
   items: Product[];
   loading: boolean;
   identity?: AdminIdentity;
+  /** 시트에 저장된 뒤 목록을 다시 읽어 옵니다. */
+  onSaved?: () => void;
 }
 
 const CONFIG: Record<
@@ -106,7 +108,7 @@ function matchesStage(item: Product, stage: StageKey): boolean {
   return true;
 }
 
-export default function StagePanel({ stage, items, loading, identity }: Props) {
+export default function StagePanel({ stage, items, loading, identity, onSaved }: Props) {
   const config = CONFIG[stage];
   const [saleFilter, setSaleFilter] = useState<SaleFilter>('ready');
   const [selling, setSelling] = useState<Product | null>(null);
@@ -298,7 +300,7 @@ export default function StagePanel({ stage, items, loading, identity }: Props) {
             ))}
           </ol>
           <p className="mt-4 border-t border-background-200 pt-3 text-[10.5px] leading-relaxed text-foreground-500">
-            시트에서 재고상태를 바꾸면 이 화면의 숫자도 다음 새로고침에 함께 반영됩니다.
+            시트에서 재고상태를 직접 바꿔도 이 화면과 홈페이지가 1분 안에 자동으로 최신 상태를 다시 불러옵니다.
           </p>
         </div>
       </div>
@@ -310,6 +312,7 @@ export default function StagePanel({ stage, items, loading, identity }: Props) {
           onClose={() => setSelling(null)}
           onCompleted={(message) => {
             if (message) setNotice(message);
+            onSaved?.();
           }}
         />
       )}

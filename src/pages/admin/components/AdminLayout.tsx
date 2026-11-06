@@ -2,17 +2,31 @@ import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { AdminIdentity, AdminTab } from '@/config/admin';
 import { ADMIN_TABS, ROLE_LABEL, isInternalRole, tabsForRole } from '@/config/admin';
+import SheetSyncBadge from '@/pages/admin/components/SheetSyncBadge';
 
 interface Props {
   tab: AdminTab;
   identity: AdminIdentity;
   onTab: (tab: AdminTab) => void;
   onLogout: () => void;
+  onRefresh: () => void;
+  refreshing: boolean;
+  lastSyncedAt: number | null;
   total: number;
   children: ReactNode;
 }
 
-export default function AdminLayout({ tab, identity, onTab, onLogout, total, children }: Props) {
+export default function AdminLayout({
+  tab,
+  identity,
+  onTab,
+  onLogout,
+  onRefresh,
+  refreshing,
+  lastSyncedAt,
+  total,
+  children,
+}: Props) {
   const tabs = tabsForRole(identity.role);
   const active = ADMIN_TABS.find((item) => item.key === tab);
   const internal = isInternalRole(identity.role);
@@ -101,7 +115,13 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="hidden whitespace-nowrap text-[11.5px] text-foreground-500 md:inline">
+              <SheetSyncBadge
+                lastSyncedAt={lastSyncedAt}
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                intervalSeconds={60}
+              />
+              <span className="hidden whitespace-nowrap text-[11.5px] text-foreground-500 xl:inline">
                 {identity.name} · {ROLE_LABEL[identity.role]}
               </span>
               <button
@@ -140,7 +160,7 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
 
         <footer className="mx-auto w-full max-w-[1400px] px-4 pb-8 text-[11px] leading-relaxed text-foreground-500 md:px-7">
           {internal
-            ? 'OYO GOLF 운영 콘솔 · 재고·가격 데이터는 구글시트에서 읽어 오고, 여기서 저장한 내용은 같은 시트에 기록됩니다.'
+            ? 'OYO GOLF 운영 콘솔 · 재고·가격 데이터는 구글시트에서 읽어 오고, 여기서 저장한 내용은 같은 시트에 기록됩니다. 시트에서 직접 고친 내용도 60초 안에 이 화면과 홈페이지에 자동 반영됩니다.'
             : 'OYO GOLF 도매 파트너 전용 화면 · 도매가는 판매가 기준으로 계산되며, 매입 원가와 내부 재고 수치는 표시되지 않습니다.'}
         </footer>
       </div>
