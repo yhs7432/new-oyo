@@ -223,12 +223,12 @@ export default function PartnerPanel({ items, loading, error, onRetry }: Props) 
                   key={product.id}
                   className="flex flex-col overflow-hidden rounded-lg border border-background-200 bg-background-50"
                 >
-                  <div className="h-40 w-full overflow-hidden bg-background-200">
+                  <div className="aspect-[4/3] w-full overflow-hidden bg-background-100">
                     <img
                       src={product.image}
                       alt={product.name.en}
                       title={`${product.name.en} ${product.brand}`}
-                      className="h-full w-full object-cover object-top"
+                      className="h-full w-full object-contain"
                     />
                   </div>
                   <div className="flex flex-1 flex-col p-3.5">
