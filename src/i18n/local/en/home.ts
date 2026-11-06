@@ -127,7 +127,7 @@ export default {
   },
   locations: {
     KR: 'Korea warehouse',
-    TH: 'Thailand office',
+    TH: 'Thailand',
   },
   product: {
     notFound: 'This product is no longer available.',
@@ -153,6 +153,10 @@ export default {
     notIncluded: 'Not included',
     note: 'Prices are in Thai Baht and exclude delivery. Individual buyers can start from a single club, and wholesale terms are shared once a partner is registered. Contact us on LINE to confirm stock and quantity.',
     related: 'More from this category',
+    photoPending: 'Photo coming soon',
+    photoPendingDesc:
+      'We are preparing photos for this item. Message us on LINE if you would like to see the actual condition and we will send them right away.',
+    photoRequest: 'Request photos',
   },
   admin: {
     console: 'Admin console',

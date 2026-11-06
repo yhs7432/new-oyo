@@ -136,13 +136,29 @@ function parsePhotos(note: string): string[] {
   );
 }
 
-function cleanDescription(note: string): string {
+/** 기존 넘버·기존 시트 행처럼 직원만 보면 되는 메모인지 판별합니다. */
+const INTERNAL_REF_PATTERN = /(기존\s*넘버|기존\s*번호|기존\s*시트|이전\s*시트|구\s*넘버|과거\s*시트)/i;
+
+function noteSegments(note: string): string[] {
   return note
     .split('|')
     .map((segment) => segment.trim())
-    .filter((segment) => segment.length > 0)
+    .filter((segment) => segment.length > 0);
+}
+
+/** 홈페이지에 내보내지 않고 관리자 화면에서만 쓰는 내부 참조 메모를 모옵니다. */
+function extractInternalRef(note: string): string {
+  return noteSegments(note)
+    .filter((segment) => INTERNAL_REF_PATTERN.test(segment))
+    .join(' · ')
+    .trim();
+}
+
+function cleanDescription(note: string): string {
+  return noteSegments(note)
     .filter((segment) => !/^(사진|박스|태국입고|한국판매가|웹노출|특가|특가가격)\s*:/.test(segment))
     .filter((segment) => !segment.startsWith('http'))
+    .filter((segment) => !INTERNAL_REF_PATTERN.test(segment))
     .join(' · ')
     .trim();
 }
@@ -183,12 +199,14 @@ function mapRow(values: Record<string, string>, index: number): Product | null {
     stock: 1,
     image: photos[0] ?? fallbackImage(type),
     images: photos,
+    photoMissing: photos.length === 0,
     addedAt: (values[COLUMN.registered] ?? '').trim(),
     conditionPercent,
     visible: (values[COLUMN.visible] ?? '').trim().toUpperCase() === 'Y',
     stockStatus: (values[COLUMN.stockStatus] ?? '').trim() || undefined,
     headCoverIncluded: (values[COLUMN.headCover] ?? '').trim() === '포함',
     description: cleanDescription(note) || undefined,
+    internalRef: extractInternalRef(note) || undefined,
     raw: values,
   };
 }

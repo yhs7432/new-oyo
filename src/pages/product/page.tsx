@@ -7,7 +7,14 @@ import ProductCard from '@/components/feature/ProductCard';
 import { products } from '@/mocks/products';
 import { useCatalogue } from '@/hooks/useCatalogue';
 import { fallbackImage } from '@/services/catalogue';
-import { categoryRoute, discountPercent, hasPrice, localizedName, visibleOnly } from '@/utils/products';
+import {
+  categoryRoute,
+  discountPercent,
+  hasPhoto,
+  hasPrice,
+  localizedName,
+  visibleOnly,
+} from '@/utils/products';
 import { groupProducts } from '@/utils/grouping';
 import { lineChannel } from '@/config/channels';
 
@@ -97,6 +104,7 @@ export default function ProductDetailPage() {
 
   const discount = discountPercent(product);
   const reserved = product.stockStatus === '예약';
+  const missingPhoto = !hasPhoto(product);
   const gradeRows = [
     { key: 'head', value: product.headGrade },
     { key: 'shaft', value: product.shaftGrade },
@@ -107,7 +115,6 @@ export default function ProductDetailPage() {
     { key: 'type', value: t(`types.${product.type}`) },
     ...(product.category === 'accessories' ? [] : [{ key: 'flex', value: product.flex ?? '—' }]),
     { key: 'spec', value: product.spec },
-    { key: 'sku', value: product.id },
     { key: 'location', value: t(`locations.${product.location}`) },
     { key: 'stock', value: String(stockTotal) },
   ];
@@ -172,6 +179,12 @@ export default function ProductDetailPage() {
                   {photos.length > 1 && (
                     <span className="absolute bottom-4 right-4 rounded-full bg-foreground-950/80 px-3 py-1 text-[11px] text-background-50">
                       {activePhoto + 1} / {photos.length}
+                    </span>
+                  )}
+                  {missingPhoto && (
+                    <span className="pointer-events-none absolute bottom-4 left-1/2 inline-flex -translate-x-1/2 items-center gap-1.5 whitespace-nowrap rounded-full bg-background-50/95 px-3 py-1.5 text-[11px] font-medium text-foreground-700 ring-1 ring-background-300">
+                      <i className="ri-camera-off-line text-[12px]"></i>
+                      {t('product.photoPending')}
                     </span>
                   )}
                 </div>
@@ -320,7 +333,40 @@ export default function ProductDetailPage() {
                       </dd>
                     </div>
                   )}
+                  <div className="flex items-center justify-between gap-4 py-2.5">
+                    <dt className="text-[11.5px] uppercase tracking-[0.1em] text-foreground-500">
+                      {t('product.sku')}
+                    </dt>
+                    <dd className="text-right text-[12.5px] text-foreground-800">{product.id}</dd>
+                  </div>
                 </dl>
+
+                {missingPhoto && (
+                  <div className="mt-6 flex flex-col gap-3 rounded-lg border border-accent-300/70 bg-accent-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-100 text-[15px] text-accent-700">
+                        <i className="ri-camera-off-line"></i>
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-[12.5px] font-medium text-accent-900">
+                          {t('product.photoPending')}
+                        </p>
+                        <p className="mt-1 text-[11.5px] leading-relaxed text-foreground-700">
+                          {t('product.photoPendingDesc')}
+                        </p>
+                      </div>
+                    </div>
+                    <a
+                      href={lineHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex shrink-0 cursor-pointer items-center justify-center gap-1.5 whitespace-nowrap rounded-md border border-accent-500 bg-background-50 px-3.5 py-2 text-[11.5px] font-medium text-accent-800 transition-colors hover:bg-accent-100"
+                    >
+                      <i className="ri-image-line text-[12px]"></i>
+                      {t('product.photoRequest')}
+                    </a>
+                  </div>
+                )}
 
                 <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                   <a

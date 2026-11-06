@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import type { Product } from '@/types/product';
-import { discountPercent, hasPrice, localizedName } from '@/utils/products';
+import { discountPercent, hasPhoto, hasPrice, localizedName } from '@/utils/products';
 import { fallbackImage } from '@/services/catalogue';
 
 export default function ProductCard({ product }: { product: Product }) {
@@ -11,6 +11,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const discount = discountPercent(product);
   const soldOut = product.stock <= 0;
   const reserved = product.stockStatus === '예약';
+  const missingPhoto = !hasPhoto(product);
 
   const [hoverBroken, setHoverBroken] = useState(false);
   const gallery = Array.isArray(product.images) ? product.images : [];
@@ -75,14 +76,15 @@ export default function ProductCard({ product }: { product: Product }) {
             {gallery.length}
           </span>
         )}
-        {Array.isArray(product.images) && product.images.length === 0 && (
-          <span className="absolute bottom-3 right-3 rounded-full bg-background-50/90 px-2.5 py-1 text-[10px] text-foreground-500 ring-1 ring-background-300">
-            {t('catalogue.noPhoto')}
-          </span>
-        )}
         {soldOut && (
           <span className="absolute inset-0 flex items-center justify-center bg-background-50/70 text-[12px] font-medium uppercase tracking-[0.2em] text-foreground-700">
             {t('catalogue.soldOut')}
+          </span>
+        )}
+        {missingPhoto && (
+          <span className="pointer-events-none absolute bottom-3 right-3 inline-flex items-center gap-1 whitespace-nowrap rounded-full bg-background-50/95 px-2.5 py-1 text-[10px] font-medium text-foreground-700 ring-1 ring-background-300">
+            <i className="ri-camera-off-line text-[11px]"></i>
+            {t('catalogue.noPhoto')}
           </span>
         )}
       </div>

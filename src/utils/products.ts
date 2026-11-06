@@ -68,6 +68,13 @@ export function hasPrice(product: Product): boolean {
   return !product.priceOnRequest && product.price > 0;
 }
 
+/** 사진이 등록된 상품인지 확인합니다. 시트에 사진 링크가 없으면 대체 이미지를 씁니다. */
+export function hasPhoto(product: Product): boolean {
+  if (product.photoMissing) return false;
+  if (product.images && product.images.length > 0) return true;
+  return Boolean(product.image);
+}
+
 /** Items without a price are always pushed to the end of price sorting. */
 function priceValue(product: Product): number {
   return hasPrice(product) ? product.price : Number.POSITIVE_INFINITY;
@@ -117,6 +124,10 @@ export function filterProducts(list: Product[], filters: FilterState): Product[]
       });
     default:
       return filtered.sort((a, b) => {
+        /* 사진이 아직 없는 상품은 목록 뒤쪽으로 보냅니다. */
+        const aPhotoFirst = hasPhoto(a) ? 0 : 1;
+        const bPhotoFirst = hasPhoto(b) ? 0 : 1;
+        if (aPhotoFirst !== bPhotoFirst) return aPhotoFirst - bPhotoFirst;
         if (a.addedAt === b.addedAt) return 0;
         if (!a.addedAt) return 1;
         if (!b.addedAt) return -1;

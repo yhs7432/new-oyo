@@ -190,7 +190,12 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     setDeleting(false);
 
     if (!result.ok) {
-      setDeleteError(result.message || '삭제하지 못했습니다.');
+      const raw = result.message || '삭제하지 못했습니다.';
+      setDeleteError(
+        raw.includes('지원하지 않는')
+          ? `${raw} 시트에 배포된 스크립트가 예전 버전입니다. 「시트 연동」 화면에서 스크립트 코드를 다시 복사해 붙여 넣고 새로 배포해 주세요.`
+          : raw,
+      );
       return;
     }
     onSaved();

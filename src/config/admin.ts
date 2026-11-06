@@ -40,6 +40,22 @@ export const ROLE_PIN: Record<AdminRole, string> = {
   partner: '2584',
 };
 
+/**
+ * Sign-up codes decide the grade automatically, so the join form never asks
+ * which role someone wants. Partners use the partner code only.
+ */
+export function roleFromCode(code: string): AdminRole | null {
+  const value = code.trim();
+  if (!value) return null;
+  const match = (Object.keys(ROLE_PIN) as AdminRole[]).find((role) => ROLE_PIN[role] === value);
+  return match ?? null;
+}
+
+/** Everything the internal console gates behind a login. */
+export function isPartnerRole(role: AdminRole): boolean {
+  return role === 'partner';
+}
+
 /** Grades that may see purchase cost (한국원가 KRW) and sheet write tools. */
 export const INTERNAL_ROLES: AdminRole[] = ['owner', 'manager', 'kr_staff', 'th_staff'];
 

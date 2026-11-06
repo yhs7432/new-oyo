@@ -190,6 +190,17 @@ export default function SheetConnectionCard() {
               </p>
             )}
 
+            <div className="mt-3 rounded-md border border-accent-200/70 bg-accent-50 px-3 py-2.5 text-[10.5px] leading-relaxed text-accent-900">
+              <p className="font-medium">이미 예전에 배포하셨다면 한 번 더 배포가 필요합니다</p>
+              <p className="mt-1 text-accent-800">
+                삭제할 때 <strong className="font-medium">“지원하지 않는 요청입니다”</strong>가 나오면
+                시트에 연결된 스크립트가 예전 버전이라는 뜻입니다. 위의{' '}
+                <strong className="font-medium">스크립트 코드 복사</strong> → Apps Script 에서 기존 내용을
+                모두 지우고 붙여 넣기 → 저장 → 배포 관리에서 기존 배포를 <strong className="font-medium">수정(새 버전)</strong>
+                하시면 같은 주소 그대로 최신 기능이 적용됩니다.
+              </p>
+            </div>
+
             <p className="mt-3 rounded-md bg-background-100 px-3 py-2.5 text-[10.5px] leading-relaxed text-foreground-600">
               이 주소는 시트에 값을 쓸 수 있는 열쇠입니다. 외부에 공유하거나 게시하지 마세요.
               직원별로는 시트 공유 권한으로 접근을 나누시면 됩니다.

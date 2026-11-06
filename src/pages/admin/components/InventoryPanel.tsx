@@ -318,6 +318,12 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                           <p className="text-[10.5px] text-foreground-500">
                             {product.addedAt || '등록일 없음'}
                           </p>
+                          {product.internalRef && (
+                            <p className="mt-0.5 max-w-[250px] truncate text-[10px] text-secondary-800">
+                              <i className="ri-file-list-3-line mr-1"></i>
+                              {product.internalRef}
+                            </p>
+                          )}
                         </div>
                       </div>
                     </td>

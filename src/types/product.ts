@@ -43,6 +43,8 @@ export interface Product {
   priceOnRequest?: boolean;
   /** Additional photos from the sheet (first one equals `image`). */
   images?: string[];
+  /** 시트에 사진이 아직 등록되지 않아 대체 이미지를 쓰는 상품입니다. */
+  photoMissing?: boolean;
   /** Condition ratio from the sheet, e.g. 90 for 90%. */
   conditionPercent?: number;
   /**
@@ -54,6 +56,11 @@ export interface Product {
   stockStatus?: string;
   headCoverIncluded?: boolean;
   description?: string;
+  /**
+   * 시트 비고에 적힌 내부 참조 정보(기존 넘버·기존 시트 행 등).
+   * 관리자 화면에서만 보여 주고 홈페이지에는 내보내지 않습니다.
+   */
+  internalRef?: string;
   /** Raw sheet row keyed by column name, used by the admin console when writing back. */
   raw?: Record<string, string>;
   /**

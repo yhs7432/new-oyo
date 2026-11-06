@@ -1,58 +1,102 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import type { AdminIdentity, AdminRole } from '@/config/admin';
-import { ROLE_LABEL, ROLE_OPTIONS } from '@/config/admin';
-
-const ROLE_HINT: Record<AdminRole, string> = {
-  owner: '모든 메뉴와 시트 편집',
-  manager: '전체 운영 메뉴',
-  kr_staff: '상품 등록 · 한국 출고 · 재고',
-  th_staff: '태국 입고 · 판매 · 재고',
-  partner: '도매 카탈로그 조회 전용 (원가 비공개)',
-};
+import { roleFromCode } from '@/config/admin';
+import type { AuthResult, SignInPayload, SignUpPayload } from '@/pages/admin/hooks/useAdminAuth';
 
 interface Props {
-  onSubmit: (pin: string, identity: AdminIdentity, remember: boolean) => boolean;
+  onSignIn: (payload: SignInPayload) => Promise<AuthResult>;
+  onSignUp: (payload: SignUpPayload) => Promise<AuthResult>;
 }
 
-export default function AdminLogin({ onSubmit }: Props) {
-  const [step, setStep] = useState<'identity' | 'pin'>('identity');
+type Mode = 'signin' | 'signup';
+
+const inputClass =
+  'w-full box-border rounded-md border border-background-300 bg-background-100 px-3 py-2 text-sm text-foreground-900 outline-none transition-colors focus:border-primary-500';
+
+const labelClass = 'mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-foreground-500';
+
+export default function AdminLogin({ onSignIn, onSignUp }: Props) {
+  const [mode, setMode] = useState<Mode>('signin');
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [error, setError] = useState('');
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [password2, setPassword2] = useState('');
   const [name, setName] = useState('');
-  const [role, setRole] = useState<AdminRole>('manager');
-  const [pin, setPin] = useState('');
-  const [remember, setRemember] = useState(true);
-  const [failed, setFailed] = useState(false);
+  const [code, setCode] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
-  const attempt = (value: string) => {
-    const ok = onSubmit(value, { name: name.trim(), role }, remember);
-    if (ok) return;
-    setFailed(true);
-    setPin('');
+  const switchMode = (next: Mode) => {
+    setMode(next);
+    setError('');
+    setNotice('');
+    setPassword('');
+    setPassword2('');
   };
 
-  const press = (key: string) => {
-    setFailed(false);
-    if (key === 'clear') {
-      setPin('');
-      return;
-    }
-    if (key === 'back') {
-      setPin((prev) => prev.slice(0, -1));
-      return;
-    }
-    if (pin.length >= 4) return;
-    const next = pin + key;
-    setPin(next);
-    if (next.length === 4) {
-      window.setTimeout(() => attempt(next), 140);
-    }
-  };
-
-  const handleIdentity = (event: FormEvent<HTMLFormElement>) => {
+  const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!name.trim()) return;
-    setStep('pin');
+    if (busy) return;
+    setError('');
+    setNotice('');
+    if (!email.trim() || !password) {
+      setError('이메일과 비밀번호를 모두 입력해 주세요.');
+      return;
+    }
+    setBusy(true);
+    const result = await onSignIn({ email, password });
+    setBusy(false);
+    if (!result.ok) setError(result.message ?? '로그인하지 못했습니다.');
+  };
+
+  const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (busy) return;
+    setError('');
+    setNotice('');
+
+    if (!name.trim()) {
+      setError('이름을 입력해 주세요.');
+      return;
+    }
+    if (!email.trim()) {
+      setError('이메일을 입력해 주세요.');
+      return;
+    }
+    if (password.length < 8) {
+      setError('비밀번호는 8자 이상으로 정해 주세요.');
+      return;
+    }
+    if (password !== password2) {
+      setError('비밀번호가 서로 다릅니다. 다시 확인해 주세요.');
+      return;
+    }
+    const matchedRole = roleFromCode(code);
+    if (!matchedRole) {
+      setError('가입 코드가 맞지 않습니다. 담당자에게 받은 4자리 코드를 확인해 주세요.');
+      return;
+    }
+
+    setBusy(true);
+    const result = await onSignUp({ email, password, name, role: matchedRole });
+    setBusy(false);
+
+    if (!result.ok) {
+      setError(result.message ?? '가입하지 못했습니다.');
+      return;
+    }
+    if (result.needsConfirm) {
+      setMode('signin');
+      setNotice(result.message ?? '확인 메일을 보냈습니다. 메일의 링크를 누른 뒤 로그인해 주세요.');
+      setPassword('');
+      setPassword2('');
+      setCode('');
+      return;
+    }
+    setNotice('가입이 완료되었습니다. 잠시 후 화면이 열립니다.');
   };
 
   return (
@@ -62,175 +106,234 @@ export default function AdminLogin({ onSubmit }: Props) {
         <div className="absolute -right-24 bottom-0 h-[380px] w-[380px] rounded-full bg-accent-500/10 blur-3xl"></div>
       </div>
 
-      <div className="relative w-full max-w-[420px] fade-up">
+      <div className="relative w-full max-w-[440px] fade-up">
         <div className="mb-7 text-center">
           <strong className="block font-heading text-[23px] tracking-[0.06em] text-background-50">
             OYO GOLF
           </strong>
           <span className="mt-1.5 block text-[9px] uppercase tracking-[0.3em] text-primary-400">
-            Korea → Thailand Admin
+            Wholesale Partner Center
           </span>
         </div>
 
         <div className="rounded-lg border border-background-50/10 bg-background-50 p-7">
-          {step === 'identity' ? (
-            <form onSubmit={handleIdentity}>
-              <h1 className="font-heading text-lg text-foreground-950">운영 관리자 로그인</h1>
+          <div className="mb-5 flex rounded-full bg-background-100 p-1">
+            {(['signin', 'signup'] as Mode[]).map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => switchMode(item)}
+                className={`flex-1 cursor-pointer whitespace-nowrap rounded-full px-3 py-1.5 text-[12px] transition-colors ${
+                  mode === item
+                    ? 'bg-foreground-950 font-medium text-background-50'
+                    : 'text-foreground-600 hover:text-foreground-900'
+                }`}
+              >
+                {item === 'signin' ? '로그인' : '회원가입'}
+              </button>
+            ))}
+          </div>
+
+          {mode === 'signin' ? (
+            <form onSubmit={handleSignIn}>
+              <h1 className="font-heading text-lg text-foreground-950">도매 파트너 로그인</h1>
               <p className="mt-2 text-[12px] leading-relaxed text-foreground-600">
-                내부 확인용 화면입니다. 실제 비밀번호를 입력하지 마세요.
+                도매가 확인과 주문을 위해 로그인해 주세요.
               </p>
 
-              <div className="mt-5 flex flex-col gap-3 sm:flex-row">
-                <label className="block min-w-0 flex-1">
-                  <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-foreground-500">
-                    이름
-                  </span>
+              <div className="mt-5 flex flex-col gap-3">
+                <label className="block min-w-0">
+                  <span className={labelClass}>이메일</span>
                   <input
-                    name="name"
+                    type="email"
+                    name="email"
+                    autoComplete="email"
                     required
-                    maxLength={40}
-                    value={name}
-                    onChange={(event) => setName(event.target.value)}
-                    placeholder="홍길동"
-                    className="w-full box-border rounded-md border border-background-300 bg-background-100 px-3 py-2 text-sm text-foreground-900 outline-none transition-colors focus:border-primary-500"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="name@company.com"
+                    className={inputClass}
                   />
                 </label>
-                <label className="block min-w-0 flex-1">
-                  <span className="mb-1.5 block text-[10px] uppercase tracking-[0.18em] text-foreground-500">
-                    권한
+
+                <label className="block min-w-0">
+                  <span className={labelClass}>비밀번호</span>
+                  <span className="relative block">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      autoComplete="current-password"
+                      required
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="••••••••"
+                      className={`${inputClass} pr-10`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      aria-label="비밀번호 표시 전환"
+                      className="absolute right-1.5 top-1/2 flex h-7 w-7 -translate-y-1/2 cursor-pointer items-center justify-center rounded-md text-[14px] text-foreground-500 transition-colors hover:text-foreground-900"
+                    >
+                      <i className={showPassword ? 'ri-eye-off-line' : 'ri-eye-line'}></i>
+                    </button>
                   </span>
-                  <select
-                    name="role"
-                    value={role}
-                    onChange={(event) => setRole(event.target.value as AdminRole)}
-                    className="w-full box-border cursor-pointer rounded-md border border-background-300 bg-background-100 px-3 py-2 text-sm text-foreground-900 outline-none transition-colors focus:border-primary-500"
-                  >
-                    {ROLE_OPTIONS.map((option) => (
-                      <option key={option} value={option}>
-                        {ROLE_LABEL[option]}
-                      </option>
-                    ))}
-                  </select>
                 </label>
               </div>
 
-              <p className="mt-2.5 rounded-md bg-background-100 px-3 py-2 text-[11px] leading-relaxed text-foreground-600">
-                <i className="ri-shield-keyhole-line mr-1"></i>
-                {ROLE_LABEL[role]} · {ROLE_HINT[role]}
-              </p>
-
-              <p className="mt-3.5 text-[11px] leading-relaxed text-foreground-500">
-                등급마다 전용 4자리 비밀번호가 따로 있습니다. 선택한 등급의 비밀번호로만 열립니다.
-              </p>
+              {error && (
+                <p className="mt-3 rounded-md border border-accent-300 bg-accent-50 px-3 py-2 text-[11.5px] leading-relaxed text-accent-800">
+                  {error}
+                </p>
+              )}
+              {notice && (
+                <p className="mt-3 rounded-md border border-secondary-200 bg-secondary-50 px-3 py-2 text-[11.5px] leading-relaxed text-secondary-900">
+                  {notice}
+                </p>
+              )}
 
               <button
                 type="submit"
-                className="mt-5 w-full cursor-pointer whitespace-nowrap rounded-md bg-foreground-950 py-2.5 text-[13px] font-medium text-background-50 transition-colors hover:bg-foreground-800"
+                disabled={busy}
+                className="mt-5 w-full cursor-pointer whitespace-nowrap rounded-md bg-foreground-950 py-2.5 text-[13px] font-medium text-background-50 transition-colors hover:bg-foreground-800 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                다음 단계
+                {busy ? '확인 중…' : '로그인'}
               </button>
+
+              <p className="mt-3.5 text-center text-[11.5px] text-foreground-500">
+                아직 계정이 없으신가요?{' '}
+                <button
+                  type="button"
+                  onClick={() => switchMode('signup')}
+                  className="cursor-pointer font-medium text-foreground-900 underline decoration-primary-400 underline-offset-2"
+                >
+                  회원가입
+                </button>
+              </p>
             </form>
           ) : (
-            <div>
-              <div className="flex items-start justify-between gap-3">
-                <div>
-                  <h1 className="font-heading text-lg text-foreground-950">OYO GOLF 관리자 잠금</h1>
-                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-foreground-600">
-                    {name} · {ROLE_LABEL[role]}
-                  </p>
-                </div>
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-background-100 text-[15px] text-foreground-700">
-                  <i className="ri-lock-2-line"></i>
-                </span>
-              </div>
+            <form onSubmit={handleSignUp}>
+              <h1 className="font-heading text-lg text-foreground-950">도매 파트너 가입</h1>
+              <p className="mt-2 text-[12px] leading-relaxed text-foreground-600">
+                담당자에게 받은 가입 코드를 입력하시면 됩니다.
+              </p>
 
-              <form
-                onSubmit={(event) => {
-                  event.preventDefault();
-                  attempt(pin);
-                }}
-              >
-                <div className="mt-5">
-                  <input
-                    type="password"
-                    inputMode="numeric"
-                    maxLength={4}
-                    value={pin}
-                    onChange={(event) => {
-                      const next = event.target.value.replace(/[^0-9]/g, '').slice(0, 4);
-                      setFailed(false);
-                      setPin(next);
-                      if (next.length === 4) {
-                        window.setTimeout(() => attempt(next), 140);
+              <div className="mt-5 flex flex-col gap-3">
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <label className="block min-w-0 flex-1">
+                    <span className={labelClass}>담당자 이름</span>
+                    <input
+                      name="name"
+                      required
+                      maxLength={40}
+                      value={name}
+                      onChange={(event) => setName(event.target.value)}
+                      placeholder="홍길동"
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block min-w-0 flex-1">
+                    <span className={labelClass}>가입 코드 (4자리)</span>
+                    <input
+                      type="password"
+                      name="invite_code"
+                      inputMode="numeric"
+                      maxLength={4}
+                      required
+                      value={code}
+                      onChange={(event) =>
+                        setCode(event.target.value.replace(/[^0-9]/g, '').slice(0, 4))
                       }
-                    }}
-                    aria-label="관리자 비밀번호 4자리"
-                    placeholder="••••"
-                    className={`w-full box-border rounded-md border bg-background-100 px-4 py-3 text-center text-xl tracking-[0.6em] outline-none transition-colors placeholder:tracking-[0.4em] placeholder:text-foreground-400 ${
-                      failed ? 'border-accent-500 text-accent-700' : 'border-background-300'
-                    }`}
-                  />
-                  <p
-                    className={`mt-2 min-h-[16px] text-[11.5px] ${failed ? 'text-accent-700' : 'text-foreground-500'}`}
-                  >
-                    {failed
-                      ? '이 등급의 비밀번호가 아닙니다. 다시 입력해 주세요.'
-                      : '선택한 등급의 4자리 비밀번호를 입력해 주세요.'}
-                  </p>
+                      placeholder="••••"
+                      className={`${inputClass} tracking-[0.4em]`}
+                    />
+                  </label>
                 </div>
 
-                <div className="mt-3 grid grid-cols-3 gap-2">
-                  {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'clear', '0', 'back'].map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => press(key)}
-                      className={`cursor-pointer rounded-md border py-2.5 text-center text-[14px] transition-colors ${
-                        key === 'clear' || key === 'back'
-                          ? 'border-background-300 bg-background-100 text-[11.5px] text-foreground-600 hover:bg-background-200'
-                          : 'border-background-300 bg-background-50 text-foreground-900 hover:border-primary-500 hover:bg-primary-50'
-                      }`}
-                    >
-                      {key === 'clear' ? '초기화' : key === 'back' ? '⌫' : key}
-                    </button>
-                  ))}
-                </div>
+                <p className="rounded-md bg-background-100 px-3 py-2 text-[11px] leading-relaxed text-foreground-600">
+                  <i className="ri-shield-keyhole-line mr-1"></i>
+                  가입 코드로 계정 등급이 정해집니다. 파트너 코드로 가입하면 도매 카탈로그 화면이
+                  열립니다.
+                </p>
 
-                <label className="mt-4 flex cursor-pointer items-center gap-2 text-[12px] text-foreground-700">
+                <label className="block min-w-0">
+                  <span className={labelClass}>이메일</span>
                   <input
-                    type="checkbox"
-                    checked={remember}
-                    onChange={(event) => setRemember(event.target.checked)}
-                    className="h-3.5 w-3.5 cursor-pointer accent-primary-600"
+                    type="email"
+                    name="email"
+                    autoComplete="email"
+                    required
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    placeholder="name@company.com"
+                    className={inputClass}
                   />
-                  이 기기에서 로그인 유지
                 </label>
 
+                <div className="flex flex-col gap-3 sm:flex-row">
+                  <label className="block min-w-0 flex-1">
+                    <span className={labelClass}>비밀번호 (8자 이상)</span>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password"
+                      autoComplete="new-password"
+                      required
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      placeholder="••••••••"
+                      className={inputClass}
+                    />
+                  </label>
+                  <label className="block min-w-0 flex-1">
+                    <span className={labelClass}>비밀번호 확인</span>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name="password_confirm"
+                      autoComplete="new-password"
+                      required
+                      value={password2}
+                      onChange={(event) => setPassword2(event.target.value)}
+                      placeholder="••••••••"
+                      className={inputClass}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {error && (
+                <p className="mt-3 rounded-md border border-accent-300 bg-accent-50 px-3 py-2 text-[11.5px] leading-relaxed text-accent-800">
+                  {error}
+                </p>
+              )}
+              {notice && (
+                <p className="mt-3 rounded-md border border-secondary-200 bg-secondary-50 px-3 py-2 text-[11.5px] leading-relaxed text-secondary-900">
+                  {notice}
+                </p>
+              )}
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="mt-5 w-full cursor-pointer whitespace-nowrap rounded-md bg-foreground-950 py-2.5 text-[13px] font-medium text-background-50 transition-colors hover:bg-foreground-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {busy ? '가입 중…' : '가입하고 시작하기'}
+              </button>
+
+              <p className="mt-3.5 text-center text-[11.5px] text-foreground-500">
+                이미 계정이 있으신가요?{' '}
                 <button
-                  type="submit"
-                  className="mt-5 w-full cursor-pointer whitespace-nowrap rounded-md bg-foreground-950 py-2.5 text-[13px] font-medium text-background-50 transition-colors hover:bg-foreground-800"
+                  type="button"
+                  onClick={() => switchMode('signin')}
+                  className="cursor-pointer font-medium text-foreground-900 underline decoration-primary-400 underline-offset-2"
                 >
-                  잠금 해제
+                  로그인
                 </button>
-              </form>
-            </div>
+              </p>
+            </form>
           )}
         </div>
 
         <div className="mt-6 flex items-center justify-center gap-4 text-[12px]">
-          {step === 'pin' && (
-            <button
-              type="button"
-              onClick={() => {
-                setStep('identity');
-                setPin('');
-                setFailed(false);
-              }}
-              className="cursor-pointer text-background-300 transition-colors hover:text-primary-400"
-            >
-              이전
-            </button>
-          )}
           <Link
             to="/"
             className="inline-flex cursor-pointer items-center gap-1.5 text-background-300 transition-colors hover:text-primary-400"

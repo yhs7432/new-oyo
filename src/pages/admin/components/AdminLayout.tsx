@@ -25,13 +25,13 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
             OYO GOLF
           </strong>
           <span className="mt-1 block text-[8px] uppercase tracking-[0.24em] text-primary-400">
-            Korea → Thailand Admin
+            Korea → Thailand Wholesale
           </span>
         </div>
 
         <nav className="flex-1 overflow-y-auto px-2.5 py-4">
           <p className="px-3 pb-2 text-[9px] uppercase tracking-[0.24em] text-background-500">
-            Operations
+            {internal ? 'Operations' : 'Wholesale'}
           </p>
           <div className="flex flex-col gap-0.5">
             {tabs.map((item) => {
@@ -63,7 +63,7 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
             <span className="flex h-4 w-4 items-center justify-center text-[14px]">
               <i className="ri-external-link-line"></i>
             </span>
-            도매몰로 이동
+            {internal ? '도매몰로 이동' : '홈페이지로 이동'}
           </Link>
         </nav>
 
@@ -78,9 +78,9 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
             className="mt-2 flex w-full cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-left text-[12px] text-background-300 transition-colors hover:bg-background-50/10 hover:text-background-50"
           >
             <span className="flex h-4 w-4 items-center justify-center text-[14px]">
-              <i className="ri-lock-line"></i>
+              <i className="ri-logout-box-r-line"></i>
             </span>
-            화면 잠금
+            로그아웃
           </button>
         </div>
       </aside>
@@ -93,10 +93,10 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
                 OYO GOLF
               </Link>
               <span className="hidden font-heading text-[15px] text-foreground-950 lg:block">
-                {active?.label ?? '관리자'}
+                {active?.label ?? '파트너 센터'}
               </span>
               <span className="hidden rounded-full bg-secondary-100 px-2.5 py-0.5 text-[10.5px] font-medium text-secondary-900 sm:inline">
-                {internal ? '시트 연동' : '도매 카탈로그'} · {total.toLocaleString('en-US')}개
+                {internal ? '운영 콘솔' : '도매 파트너'} · {total.toLocaleString('en-US')}개
               </span>
             </div>
 
@@ -109,7 +109,7 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
                 onClick={onLogout}
                 className="cursor-pointer whitespace-nowrap rounded-md border border-foreground-900 px-3 py-1.5 text-[11.5px] text-foreground-900 transition-colors hover:bg-foreground-900 hover:text-background-50"
               >
-                화면 잠금
+                로그아웃
               </button>
             </div>
           </div>
@@ -140,8 +140,8 @@ export default function AdminLayout({ tab, identity, onTab, onLogout, total, chi
 
         <footer className="mx-auto w-full max-w-[1400px] px-4 pb-8 text-[11px] leading-relaxed text-foreground-500 md:px-7">
           {internal
-            ? 'OYO GOLF 운영 관리자 · 재고·가격 데이터는 구글시트에서 읽어 오고, 여기서 저장한 내용은 같은 시트에 기록됩니다.'
-            : 'OYO GOLF 도매 파트너 전용 화면 · 도매가는 판매가 기준으로 계산되며, 매입 원가와 주문 내역은 표시되지 않습니다.'}
+            ? 'OYO GOLF 운영 콘솔 · 재고·가격 데이터는 구글시트에서 읽어 오고, 여기서 저장한 내용은 같은 시트에 기록됩니다.'
+            : 'OYO GOLF 도매 파트너 전용 화면 · 도매가는 판매가 기준으로 계산되며, 매입 원가와 내부 재고 수치는 표시되지 않습니다.'}
         </footer>
       </div>
     </div>

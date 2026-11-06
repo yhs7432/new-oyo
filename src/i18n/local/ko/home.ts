@@ -127,7 +127,7 @@ export default {
   },
   locations: {
     KR: '한국 출고장',
-    TH: '태국 사무소',
+    TH: '태국',
   },
   product: {
     notFound: '판매가 종료된 상품입니다.',
@@ -153,6 +153,10 @@ export default {
     notIncluded: '미포함',
     note: '가격은 태국 바트 기준이며 배송비는 별도입니다. 개인 구매는 1개부터 가능하고, 도매 조건은 파트너 등록 후 별도로 안내해 드립니다. 재고와 수량은 LINE으로 문의해 주세요.',
     related: '같은 카테고리의 다른 상품',
+    photoPending: '사진 준비 중',
+    photoPendingDesc:
+      '이 상품의 사진을 지금 준비하고 있습니다. 실제 상태가 궁금하시면 LINE으로 문의해 주세요. 바로 찍어서 보내드립니다.',
+    photoRequest: '사진 요청하기',
   },
   admin: {
     console: '관리자 콘솔',
