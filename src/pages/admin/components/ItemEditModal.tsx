@@ -113,6 +113,15 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const netThb = parsedPrice - costThb - vatAmount - feeAmount;
   const marginPercent = parsedPrice > 0 ? Math.round((netThb / parsedPrice) * 100) : 0;
   const isSold = (stockStatus ?? '').includes('완료');
+
+  /** 재고상태가 '판매 완료' 계열이면 웹노출은 항상 N으로 맞춥니다. */
+  const isSoldStatus = (status: string) => status.includes('완료');
+  const initialVisible = raw['웹노출'] ?? 'Y';
+  const originalVisible = isSoldStatus(raw['재고상태'] ?? product.stockStatus ?? '판매 가능')
+    ? 'N'
+    : initialVisible;
+  const effectiveVisible = isSoldStatus(stockStatus) ? 'N' : visible;
+
   const dirty =
     brand !== (raw['브랜드'] ?? product.brand) ||
     name !== (raw['상품명'] ?? product.name.en) ||
@@ -125,17 +134,13 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     grade !== (raw['중고등급'] ?? product.headGrade ?? '') ||
     condition !== (product.conditionPercent ? String(product.conditionPercent) : '') ||
     stockStatus !== (raw['재고상태'] ?? product.stockStatus ?? '판매 가능') ||
-    effectiveVisible !== (raw['웹노출'] ?? 'Y') ||
+    effectiveVisible !== originalVisible ||
     location !== (raw['보관위치'] ?? '') ||
     staff !== (raw['담당자'] ?? '') ||
     cover !== (raw['헤드커버'] ?? (product.headCoverIncluded ? '포함' : '미포함')) ||
     special !== initialSpecial ||
     specialPrice !== initialSpecialPrice ||
     mergeNotePhotos(originalNote, photoUrls) !== mergeNotePhotos(originalNote, parsePhotoUrls(originalNote));
-
-  /** 재고상태가 '판매 완료' 계열이면 웹노출은 항상 N으로 맞춥니다. */
-  const isSoldStatus = (status: string) => status.includes('완료');
-  const effectiveVisible = isSoldStatus(stockStatus) ? 'N' : visible;
 
   const save = async () => {
     setState('saving');
