@@ -1,5 +1,5 @@
-import { SHEET_CSV_URL } from '@/config/sheet';
-import type { Flex, Grade, Product, ProductType } from '@/types/product';
+import { SHEET_ARCHIVE_URL, SHEET_CSV_URL } from '@/config/sheet';
+import type { Flex, Grade, Product, ProductType, SaleRecord } from '@/types/product';
 import { noteSpecialPrice, resolveCategory } from '@/utils/sheetNote';
 
 const FALLBACK_IMAGES: Record<ProductType, string> = {
@@ -286,6 +286,96 @@ export function mapSheetToProducts(csv: string): Product[] {
   return products;
 }
 
+/** ‘판매 완료’ 탭의 열 이름입니다. */
+const ARCHIVE_COLUMN = {
+  id: '재고번호',
+  soldAt: '기록시각',
+  saleDate: '판매일',
+  revenue: '판매가(THB)',
+  costKrw: '원가(KRW)',
+  vat: 'VAT(THB)',
+  fee: '웹수수료(THB)',
+  rate: '환율',
+  channel: '판매채널',
+  staff: '담당자',
+  memo: '메모',
+} as const;
+
+/** 판매 완료 탭의 한 줄을 판매 기록으로 바꿉니다. 재고번호가 없으면 건너뜁니다. */
+function mapArchiveRows(csv: string): Map<string, SaleRecord> {
+  const records = new Map<string, SaleRecord>();
+  const rows = parseCsv(csv);
+  if (rows.length < 2) return records;
+
+  const header = rows[0].map((cell) => cell.trim());
+
+  for (let i = 1; i < rows.length; i += 1) {
+    const cells = rows[i];
+    const record: Record<string, string> = {};
+    header.forEach((key, columnIndex) => {
+      record[key] = cells[columnIndex] ?? '';
+    });
+
+    const id = (record[ARCHIVE_COLUMN.id] ?? '').trim();
+    if (!id) continue;
+
+    records.set(id, {
+      saleDate: (record[ARCHIVE_COLUMN.saleDate] ?? '').trim(),
+      soldAt: (record[ARCHIVE_COLUMN.soldAt] ?? '').trim() || undefined,
+      revenue: toNumber(record[ARCHIVE_COLUMN.revenue]),
+      costKrw: toNumber(record[ARCHIVE_COLUMN.costKrw]),
+      vat: toNumber(record[ARCHIVE_COLUMN.vat]),
+      fee: toNumber(record[ARCHIVE_COLUMN.fee]),
+      rate: toNumber(record[ARCHIVE_COLUMN.rate]),
+      channel: (record[ARCHIVE_COLUMN.channel] ?? '').trim() || undefined,
+      staff: (record[ARCHIVE_COLUMN.staff] ?? '').trim() || undefined,
+      memo: (record[ARCHIVE_COLUMN.memo] ?? '').trim() || undefined,
+    });
+  }
+
+  return records;
+}
+
+/**
+ * ‘판매 완료’ 탭에 기록이 있으면, 메인 시트 상태가 어떻든 판매 완료로 되살립니다.
+ * (시트 오류로 재입력하면서 상태·비고가 초기화된 경우를 복구합니다)
+ */
+function applySaleRecords(items: Product[], records: Map<string, SaleRecord>): Product[] {
+  if (records.size === 0) return items;
+
+  return items.map((item) => {
+    const record = records.get(item.id);
+    if (!record) return item;
+
+    if ((item.stockStatus ?? '').includes('완료') && item.visible === false) {
+      return { ...item, saleRecord: record };
+    }
+
+    return {
+      ...item,
+      stockStatus: '판매 완료',
+      visible: false,
+      saleRecord: record,
+      raw: { ...(item.raw ?? {}), 재고상태: '판매 완료', 웹노출: 'N' },
+    };
+  });
+}
+
+/** 판매 완료 탭을 읽습니다. 실패해도 메인 목록은 그대로 보여 줍니다. */
+async function fetchSaleRecords(): Promise<Map<string, SaleRecord>> {
+  try {
+    const response = await fetch(`${SHEET_ARCHIVE_URL}&_=${Date.now()}`, {
+      headers: { Accept: 'text/csv' },
+      cache: 'no-store',
+    });
+    if (!response.ok) return new Map();
+    const text = await response.text();
+    return mapArchiveRows(text);
+  } catch {
+    return new Map();
+  }
+}
+
 let cache: Product[] | null = null;
 let cacheAt = 0;
 let pending: Promise<Product[]> | null = null;
@@ -317,15 +407,15 @@ export async function fetchCatalogue(force = false): Promise<Product[]> {
   pending = (async () => {
     // 구글 CSV 응답도 브라우저·구글 쪽에 잠시 캐시되므로 매번 주소를 다르게 만듭니다.
     const url = `${SHEET_CSV_URL}&_=${Date.now()}`;
-    const response = await fetch(url, {
-      headers: { Accept: 'text/csv' },
-      cache: 'no-store',
-    });
+    const [response, records] = await Promise.all([
+      fetch(url, { headers: { Accept: 'text/csv' }, cache: 'no-store' }),
+      fetchSaleRecords(),
+    ]);
     if (!response.ok) {
       throw new Error(`Sheet request failed (${response.status})`);
     }
     const text = await response.text();
-    const items = mapSheetToProducts(text);
+    const items = applySaleRecords(mapSheetToProducts(text), records);
     if (items.length === 0) {
       throw new Error('Sheet returned no products');
     }

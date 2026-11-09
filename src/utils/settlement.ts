@@ -109,6 +109,30 @@ export function isSoldItem(item: Product): boolean {
 
 /** Revenue, cost (KRW → THB) and VAT/fee charges for one sold product. */
 export function settlementOf(item: Product, rate: number): SettledItem {
+  const record = item.saleRecord;
+
+  /* ‘판매 완료’ 탭에 기록이 있으면 그 기록을 정답으로 씁니다.
+     메인 시트를 다시 입력하면서 비고(판매일·환율)와 판매가가 초기화된 경우도
+     판매 당시 금액 그대로 정산되도록 하기 위함입니다. */
+  if (record) {
+    const saleThb = record.revenue > 0 ? record.revenue : item.priceOnRequest ? 0 : item.price;
+    const appliedRate = record.rate > 0 ? record.rate : rate;
+    const cost = appliedRate > 0 ? record.costKrw / appliedRate : 0;
+    const charges = record.vat + record.fee;
+    const net = saleThb - cost - charges;
+    return {
+      saleDate: record.saleDate,
+      monthKey: monthKeyOf(record.saleDate),
+      revenue: saleThb,
+      cost,
+      charges,
+      net,
+      marginPercent: saleThb > 0 ? Math.round((net / saleThb) * 1000) / 10 : 0,
+      rate: appliedRate,
+      rateLocked: record.rate > 0,
+    };
+  }
+
   const note = noteOf(item);
   const saleThb = item.priceOnRequest ? 0 : item.price;
   const costKrw = Number(String(item.raw?.['한국원가(KRW)'] ?? '').replace(/[^0-9]/g, '')) || 0;
@@ -165,19 +189,19 @@ export function settlementLines(
 
 /** 판매 완료 시점 환율이 고정된 판매 건 수(선택 기간 기준). */
 export function lockedRateCount(items: Product[], range: DateRange | null = null): number {
-  return items.filter(
-    (item) =>
-      isSoldItem(item) &&
-      inDateRange(readNoteValue(noteOf(item), SALE_DATE), range) &&
-      noteFxRate(noteOf(item)) > 0,
-  ).length;
+  return items.filter((item) => {
+    if (!isSoldItem(item)) return false;
+    const settled = settlementOf(item, 0);
+    return inDateRange(settled.saleDate, range) && settled.rateLocked;
+  }).length;
 }
 
 /** Sold products with no readable sale date. */
 export function undatedSoldCount(items: Product[]): number {
-  return items.filter(
-    (item) => isSoldItem(item) && !normalizeDate(readNoteValue(noteOf(item), SALE_DATE)),
-  ).length;
+  return items.filter((item) => {
+    if (!isSoldItem(item)) return false;
+    return !normalizeDate(settlementOf(item, 0).saleDate);
+  }).length;
 }
 
 /** Sold products excluded because their sale date is outside the selected range. */
@@ -185,7 +209,7 @@ export function outOfRangeCount(items: Product[], range: DateRange | null): numb
   if (!isRangeActive(range)) return 0;
   return items.filter((item) => {
     if (!isSoldItem(item)) return false;
-    return !inDateRange(readNoteValue(noteOf(item), SALE_DATE), range);
+    return !inDateRange(settlementOf(item, 0).saleDate, range);
   }).length;
 }
 

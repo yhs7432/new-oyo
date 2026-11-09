@@ -65,22 +65,49 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     .replace(/[^0-9]/g, '');
   const initialSaleDate = toDateInput(readNoteValue(originalNote, SALE_DATE));
 
+  /* ‘판매 완료’ 탭에 기록이 남아 있으면 그 기록을 우선합니다.
+     메인 시트를 다시 입력하면서 상태·판매일·판매가가 초기화된 상품을 되살리기 위함입니다. */
+  const saleRecord = product.saleRecord;
+  const archivedSold = Boolean(saleRecord);
+  const archivedVatRate =
+    saleRecord && saleRecord.revenue > 0
+      ? Math.round((saleRecord.vat / saleRecord.revenue) * 1000) / 10
+      : 0;
+  const archivedChannel =
+    saleRecord?.channel && SALE_CHANNELS.includes(saleRecord.channel)
+      ? saleRecord.channel
+      : SALE_CHANNELS[0];
+
   const [brand, setBrand] = useState(raw['브랜드'] ?? product.brand);
   const [name, setName] = useState(raw['상품명'] ?? product.name.en);
   const [spec, setSpec] = useState(raw['사양'] ?? product.spec);
-  const [price, setPrice] = useState(raw['판매가격(THB)'] ?? String(product.price || ''));
-  const [cost, setCost] = useState(raw['한국원가(KRW)'] ?? '');
-  const [vat, setVat] = useState(initialVat);
-  const [fee, setFee] = useState(initialFee);
-  const [saleDate, setSaleDate] = useState(initialSaleDate);
+  const [price, setPrice] = useState(
+    saleRecord && saleRecord.revenue > 0
+      ? String(Math.round(saleRecord.revenue))
+      : (raw['판매가격(THB)'] ?? String(product.price || '')),
+  );
+  const [cost, setCost] = useState(
+    saleRecord && saleRecord.costKrw > 0
+      ? String(Math.round(saleRecord.costKrw))
+      : (raw['한국원가(KRW)'] ?? ''),
+  );
+  const [vat, setVat] = useState(
+    archivedSold ? (archivedVatRate > 0 ? String(archivedVatRate) : '') : initialVat,
+  );
+  const [fee, setFee] = useState(
+    archivedSold && saleRecord && saleRecord.fee > 0 ? String(Math.round(saleRecord.fee)) : initialFee,
+  );
+  const [saleDate, setSaleDate] = useState(
+    archivedSold && saleRecord?.saleDate ? toDateInput(saleRecord.saleDate) : initialSaleDate,
+  );
   const [grade, setGrade] = useState(raw['중고등급'] ?? product.headGrade ?? '');
   const [condition, setCondition] = useState(
     product.conditionPercent ? String(product.conditionPercent) : '',
   );
   const [stockStatus, setStockStatus] = useState(
-    raw['재고상태'] ?? product.stockStatus ?? '판매 가능',
+    archivedSold ? '판매 완료' : (raw['재고상태'] ?? product.stockStatus ?? '판매 가능'),
   );
-  const [visible, setVisible] = useState(raw['웹노출'] ?? 'Y');
+  const [visible, setVisible] = useState(archivedSold ? 'N' : (raw['웹노출'] ?? 'Y'));
   const [location, setLocation] = useState(raw['보관위치'] ?? '');
   const [staff, setStaff] = useState(raw['담당자'] ?? '');
   const [cover, setCover] = useState(raw['헤드커버'] ?? (product.headCoverIncluded ? '포함' : '미포함'));
@@ -93,9 +120,9 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const isClub = isClubType(product.type);
 
   const [state, setState] = useState<SaveState>('idle');
-  const [channel, setChannel] = useState(SALE_CHANNELS[0]);
+  const [channel, setChannel] = useState(archivedChannel);
   /** 판매 완료 시트의 ‘메모’ 칸에 들어갈 자유 메모입니다. */
-  const [memo, setMemo] = useState('');
+  const [memo, setMemo] = useState(saleRecord?.memo ?? '');
   const [message, setMessage] = useState('');
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -118,9 +145,11 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const feeBahtValue = Number(String(fee).replace(/[^0-9.]/g, '')) || 0;
   const costKrw = Number(String(cost).replace(/[^0-9]/g, '')) || 0;
   // 판매 완료 시점에 고정된 환율이 있으면 그 값으로 계산합니다.
-  const savedFxRate = (raw['재고상태'] ?? product.stockStatus ?? '').includes('완료')
-    ? noteFxRate(originalNote)
-    : 0;
+  const savedFxRate = archivedSold
+    ? (saleRecord?.rate ?? 0)
+    : (raw['재고상태'] ?? product.stockStatus ?? '').includes('완료')
+      ? noteFxRate(originalNote)
+      : 0;
   const settlementRate = savedFxRate > 0 ? savedFxRate : rate;
   const costThb = settlementRate > 0 ? costKrw / settlementRate : 0;
   const vatAmount = (parsedPrice * vatRateValue) / 100;
@@ -133,13 +162,13 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
 
   /** 재고상태가 '판매 완료' 계열이면 웹노출은 항상 N으로 맞춥니다. */
   const isSoldStatus = (status: string) => status.includes('완료');
-  const originalStockStatus = raw['재고상태'] ?? product.stockStatus ?? '판매 가능';
+  const originalStockStatus = archivedSold
+    ? '판매 완료'
+    : (raw['재고상태'] ?? product.stockStatus ?? '판매 가능');
   /** 판매 완료로 기록된 상품을 다시 판매 가능으로 되돌리는 중인지. */
   const isReverting = isSoldStatus(originalStockStatus) && !isSoldStatus(stockStatus);
-  const initialVisible = raw['웹노출'] ?? 'Y';
-  const originalVisible = isSoldStatus(raw['재고상태'] ?? product.stockStatus ?? '판매 가능')
-    ? 'N'
-    : initialVisible;
+  const initialVisible = archivedSold ? 'N' : (raw['웹노출'] ?? 'Y');
+  const originalVisible = isSoldStatus(originalStockStatus) ? 'N' : initialVisible;
   const effectiveVisible = isSoldStatus(stockStatus) ? 'N' : visible;
 
   const dirty =

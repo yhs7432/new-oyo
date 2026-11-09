@@ -16,6 +16,28 @@ export type Flex = 'L' | 'A' | 'R' | 'SR' | 'S' | 'X';
 
 export type StockLocation = 'KR' | 'TH';
 
+/**
+ * ‘판매 완료’ 탭에 남아 있는 판매 기록.
+ * 메인 시트의 상태·비고가 사라져도 이 기록으로 판매 여부와 정산 금액을 되살립니다.
+ */
+export interface SaleRecord {
+  saleDate: string;
+  soldAt?: string;
+  /** 실제 판매가(THB) */
+  revenue: number;
+  /** 원가(KRW) */
+  costKrw: number;
+  /** VAT(THB) 금액 */
+  vat: number;
+  /** 웹 수수료(THB) 금액 */
+  fee: number;
+  /** 판매 시점에 고정된 환율(1바트 = ?원). 0이면 기록 없음. */
+  rate: number;
+  channel?: string;
+  staff?: string;
+  memo?: string;
+}
+
 export interface LocalizedName {
   en: string;
   ko: string;
@@ -63,6 +85,11 @@ export interface Product {
   internalRef?: string;
   /** Raw sheet row keyed by column name, used by the admin console when writing back. */
   raw?: Record<string, string>;
+  /**
+   * ‘판매 완료’ 탭에서 읽어 온 판매 기록.
+   * 값이 있으면 메인 시트 상태와 상관없이 판매 완료 상품으로 취급합니다.
+   */
+  saleRecord?: SaleRecord;
   /**
    * Sheet row ids merged into this card on the website.
    * The sheet keeps every row separately; this is display-only.
