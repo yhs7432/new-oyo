@@ -14,6 +14,7 @@ import {
   SPECIAL_PRICE,
   categoryBadgeClass,
   isSpecial,
+  noteKrPrice,
   writeNoteValue,
 } from '@/utils/sheetNote';
 import { Link } from 'react-router-dom';
@@ -34,6 +35,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
   const [status, setStatus] = useState('all');
   const [exposure, setExposure] = useState('all');
   const [hideSold, setHideSold] = useState(true);
+  const [onlyKrPrice, setOnlyKrPrice] = useState(false);
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -89,10 +91,16 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
 
   const soldCount = useMemo(() => items.filter(isSoldItem).length, [items]);
 
+  const krPriceCount = useMemo(
+    () => items.filter((item) => noteKrPrice(item.raw?.['비고'] ?? '') > 0).length,
+    [items],
+  );
+
   const filtered = useMemo(() => {
     const keyword = query.trim().toLowerCase();
     return items.filter((product) => {
       if (hideSold && isSoldItem(product)) return false;
+      if (onlyKrPrice && noteKrPrice(product.raw?.['비고'] ?? '') === 0) return false;
       if (type !== 'all' && product.type !== type) return false;
       if (status !== 'all' && (product.stockStatus ?? '상태 없음') !== status) return false;
       if (exposure === 'shown' && product.visible === false) return false;
@@ -103,7 +111,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
         .toLowerCase()
         .includes(keyword);
     });
-  }, [items, query, type, status, exposure, hideSold]);
+  }, [items, query, type, status, exposure, hideSold, onlyKrPrice]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const safePage = Math.min(page, totalPages);
@@ -112,7 +120,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
 
   useEffect(() => {
     setPage(1);
-  }, [query, type, status, exposure, hideSold, pageSize]);
+  }, [query, type, status, exposure, hideSold, onlyKrPrice, pageSize]);
 
   const pageNumbers = useMemo(() => {
     const windowSize = 5;
@@ -234,6 +242,27 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
               {soldCount}
             </span>
           </label>
+
+          <label
+            className={`flex cursor-pointer items-center gap-1.5 whitespace-nowrap rounded-md border px-2.5 py-2 text-[11.5px] transition-colors ${
+              onlyKrPrice
+                ? 'border-accent-500 bg-accent-50 text-accent-900'
+                : 'border-background-300 bg-background-100 text-foreground-600 hover:border-foreground-400'
+            }`}
+            title="‘한국 판매가 (KRW)’ 칸을 채워 저장한 상품만 모아 봅니다"
+          >
+            <input
+              type="checkbox"
+              checked={onlyKrPrice}
+              onChange={(event) => setOnlyKrPrice(event.target.checked)}
+              className="h-3.5 w-3.5 cursor-pointer accent-accent-600"
+            />
+            <i className="ri-store-2-line"></i>
+            한국 판매가 입력만
+            <span className="rounded-full bg-background-200 px-1.5 text-[10px] text-foreground-700">
+              {krPriceCount}
+            </span>
+          </label>
           {soldCount > 0 && hideSold && (
             <button
               type="button"
@@ -289,6 +318,12 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
       {!error && !loading && filtered.length === 0 && (
         <p className="mt-4 rounded-lg border border-background-200 bg-background-50 px-4 py-8 text-center text-[12.5px] text-foreground-600">
           조건에 맞는 상품이 없습니다.
+          {onlyKrPrice && krPriceCount === 0 && (
+            <span className="mt-1 block text-[11.5px] text-foreground-500">
+              아직 한국 판매가를 저장한 상품이 없습니다. 상품의 “수정·저장”에서 ‘한국 판매가 (KRW)’
+              칸을 채워 저장하면 이곳에 모입니다.
+            </span>
+          )}
           {hideSold && soldCount > 0 && (
             <span className="mt-1 block text-[11.5px] text-foreground-500">
               판매 완료 상품 {soldCount}건은 숨겨져 있습니다. 위의 “판매 완료 숨기기”를 끄면 함께
@@ -304,7 +339,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
             <table className="w-full min-w-[940px] border-collapse text-left">
               <thead>
                 <tr className="border-b border-background-200 bg-background-100/70">
-                  {['상품 정보', '수량 · 구성', '상태 · 위치', '관리', '판매가 (THB / KRW)'].map(
+                  {['상품 정보', '수량 · 구성', '상태 · 위치', '관리', '판매가 (THB / KRW / 한국가)'].map(
                     (label) => (
                       <th
                         key={label}
@@ -470,6 +505,12 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                           <p className="mt-0.5 whitespace-nowrap text-[10.5px] text-foreground-500">
                             {formatKrw(product.price * rate)}
                           </p>
+                          {noteKrPrice(product.raw?.['비고'] ?? '') > 0 && (
+                            <p className="mt-0.5 whitespace-nowrap text-[10.5px] text-accent-800">
+                              <i className="ri-store-2-line mr-1"></i>
+                              한국 {formatKrw(noteKrPrice(product.raw?.['비고'] ?? ''))}
+                            </p>
+                          )}
                         </>
                       )}
                     </td>

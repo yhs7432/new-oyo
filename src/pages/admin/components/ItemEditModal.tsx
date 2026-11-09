@@ -19,6 +19,7 @@ import {
   FEE_RATE,
   FEE_RATE_LEGACY,
   FX_RATE,
+  KR_PRICE,
   SALE_DATE,
   SPECIAL_FLAG,
   SPECIAL_PRICE,
@@ -64,6 +65,8 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const initialFee = (readNoteValue(originalNote, FEE_RATE) || readNoteValue(originalNote, FEE_RATE_LEGACY))
     .replace(/[^0-9]/g, '');
   const initialSaleDate = toDateInput(readNoteValue(originalNote, SALE_DATE));
+  /** 한국 중고거래에 올릴 때 직접 정해 둔 원화 판매가입니다. */
+  const initialKrPrice = readNoteValue(originalNote, KR_PRICE).replace(/[^0-9]/g, '');
 
   /* ‘판매 완료’ 탭에 기록이 남아 있으면 그 기록을 우선합니다.
      메인 시트를 다시 입력하면서 상태·판매일·판매가가 초기화된 상품을 되살리기 위함입니다. */
@@ -91,6 +94,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
       ? String(Math.round(saleRecord.costKrw))
       : (raw['한국원가(KRW)'] ?? ''),
   );
+  const [krPrice, setKrPrice] = useState(initialKrPrice);
   const [vat, setVat] = useState(
     archivedSold ? (archivedVatRate > 0 ? String(archivedVatRate) : '') : initialVat,
   );
@@ -177,6 +181,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     spec !== (raw['사양'] ?? product.spec) ||
     price !== (raw['판매가격(THB)'] ?? String(product.price || '')) ||
     cost !== (raw['한국원가(KRW)'] ?? '') ||
+    krPrice !== initialKrPrice ||
     vat !== initialVat ||
     fee !== initialFee ||
     saleDate !== initialSaleDate ||
@@ -214,8 +219,14 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
       SALE_DATE,
       saleDate ? saleDate : null,
     );
-    const noteWithFee = writeNoteValue(
+    // 한국 중고거래에 올릴 때 쓰는 원화 판매가를 비고에 함께 보관합니다.
+    const noteWithKrPrice = writeNoteValue(
       noteWithDate,
+      KR_PRICE,
+      Number(krPrice) > 0 ? String(Math.round(Number(krPrice))) : null,
+    );
+    const noteWithFee = writeNoteValue(
+      noteWithKrPrice,
       FEE_RATE,
       feeBahtValue > 0 ? String(feeBahtValue) : null,
     );
@@ -403,6 +414,40 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                 placeholder="0"
                 className={`${inputClass} text-right`}
               />
+              <span className="mt-1 flex items-center justify-end gap-1 text-[11px] leading-relaxed">
+                <span className="text-foreground-500">≈</span>
+                <strong className="font-normal text-foreground-900">
+                  {parsedPrice > 0 && settlementRate > 0 ? formatKrw(parsedPrice * settlementRate) : '0원'}
+                </strong>
+                {savedFxRate > 0 && (
+                  <span className="text-foreground-500">고정 환율</span>
+                )}
+              </span>
+            </label>
+            <label className="block min-w-0">
+              <span className={labelClass}>한국 판매가 (KRW)</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={krPrice}
+                onChange={(event) => setKrPrice(event.target.value.replace(/[^0-9]/g, ''))}
+                placeholder="당근마켓 등에 올릴 금액"
+                className={`${inputClass} text-right`}
+              />
+              <span className="mt-1 flex flex-wrap items-center justify-between gap-1 text-[10.5px] leading-relaxed text-foreground-500">
+                <span>
+                  {Number(krPrice) > 0 ? `입력값 ${formatKrw(Number(krPrice))}` : '비우면 환산값만 사용'}
+                </span>
+                {parsedPrice > 0 && settlementRate > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setKrPrice(String(Math.round(parsedPrice * settlementRate)))}
+                    className="cursor-pointer whitespace-nowrap rounded border border-background-300 px-1.5 py-0.5 text-[10px] text-foreground-700 transition-colors hover:border-primary-400"
+                  >
+                    환산값 넣기
+                  </button>
+                )}
+              </span>
             </label>
             <label className="block min-w-0">
               <span className={labelClass}>한국원가 (KRW)</span>
@@ -441,7 +486,8 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
               <span>
                 <i className="ri-information-line mr-1"></i>
                 VAT는 판매가의 %로, 웹 수수료는 실제로 내는 태국 바트(฿) 금액으로 넣어 주세요. 비워
-                두면 0으로 계산합니다.
+                두면 0으로 계산합니다. 한국 판매가는 당근마켓처럼 국내에 올릴 때 쓸 원화 금액이며,
+                비워 두면 환산 금액만 참고로 보입니다.
               </span>
             </div>
             <label className="block min-w-0">

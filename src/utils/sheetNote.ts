@@ -22,6 +22,12 @@ export const FEE_RATE_LEGACY = '바트 직접 입력';
 /** Sale date, stored in 비고 as `판매일:2026-11-05`. */
 export const SALE_DATE = '판매일';
 /**
+ * 한국 중고거래(당근마켓 등)에 올릴 때 쓰는 원화 판매가를 상품별로 보관합니다.
+ *   한국판매가:132000
+ * 시트에 별도 칸이 없어 비고 안에 함께 남깁니다.
+ */
+export const KR_PRICE = '한국판매가';
+/**
  * 정산 환율(1바트 = ?원)은 판매 완료를 저장한 그 시점 값으로 고정해서 비고에 남깁니다.
  *   환율:40.2
  * 나중에 환율이 올라도 이미 판매한 건은 이 값으로만 원가를 환산합니다.
@@ -93,6 +99,14 @@ export function noteAmount(note: string, key: string, legacyKey?: string): numbe
   const value = Number(raw);
   if (!Number.isFinite(value) || value <= 0) return 0;
   return value;
+}
+
+/** 상품별로 정해 둔 한국 판매가(원). 기록이 없으면 0. */
+export function noteKrPrice(note: string): number {
+  const raw = readNoteValue(note, KR_PRICE).replace(/[^0-9]/g, '');
+  if (!raw) return 0;
+  const value = Number(raw);
+  return Number.isFinite(value) && value > 0 ? value : 0;
 }
 
 /** 판매 완료 시점에 고정된 정산 환율. 기록이 없으면 0. */
