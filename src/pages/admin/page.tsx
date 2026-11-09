@@ -90,7 +90,13 @@ export default function AdminPage() {
         );
       case 'sheet':
         return (
-          <SheetPanel items={items} loading={catalogueLoading} error={error} onRetry={reload} />
+          <SheetPanel
+            items={items}
+            loading={catalogueLoading}
+            error={error}
+            onRetry={reload}
+            staffName={identity.name}
+          />
         );
       default:
         return (

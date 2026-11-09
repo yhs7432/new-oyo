@@ -1,12 +1,14 @@
 import type { Product } from '@/types/product';
 import { SHEET_EDIT_URL } from '@/config/admin';
 import SheetConnectionCard from '@/pages/admin/components/SheetConnectionCard';
+import SaleRecoveryPanel from '@/pages/admin/components/SaleRecoveryPanel';
 
 interface Props {
   items: Product[];
   loading: boolean;
   error: string | null;
   onRetry: () => void;
+  staffName: string;
 }
 
 const COLUMNS = [
@@ -25,7 +27,7 @@ const COLUMNS = [
   { name: '비고', desc: '사진 링크(drive.google.com/thumbnail?id=...)를 넣으면 사진이 표시됩니다.' },
 ];
 
-export default function SheetPanel({ items, loading, error, onRetry }: Props) {
+export default function SheetPanel({ items, loading, error, onRetry, staffName }: Props) {
   const withPhoto = items.filter((item) => (item.images?.length ?? 0) > 0).length;
   const noPrice = items.filter((item) => item.priceOnRequest).length;
 
@@ -51,6 +53,8 @@ export default function SheetPanel({ items, loading, error, onRetry }: Props) {
       </div>
 
       <SheetConnectionCard />
+
+      <SaleRecoveryPanel items={items} staffName={staffName} onDone={onRetry} />
 
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[

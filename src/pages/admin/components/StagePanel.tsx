@@ -5,6 +5,9 @@ import { SHEET_EDIT_URL } from '@/config/admin';
 import { formatThb, statusClass } from '@/pages/admin/utils';
 import SettlementSection from '@/pages/admin/components/SettlementSection';
 import SaleCompleteModal from '@/pages/admin/components/SaleCompleteModal';
+import ItemEditModal from '@/pages/admin/components/ItemEditModal';
+import RestoreSaleModal from '@/pages/admin/components/RestoreSaleModal';
+import { useFxRate } from '@/hooks/useFxRate';
 import { isSoldItem, normalizeDate } from '@/utils/settlement';
 import { SALE_DATE, readNoteValue } from '@/utils/sheetNote';
 
@@ -116,8 +119,11 @@ function matchesStage(item: Product, stage: StageKey): boolean {
 
 export default function StagePanel({ stage, items, loading, identity, onSaved }: Props) {
   const config = CONFIG[stage];
+  const { rate } = useFxRate();
   const [saleFilter, setSaleFilter] = useState<SaleFilter>('sold');
   const [selling, setSelling] = useState<Product | null>(null);
+  const [editing, setEditing] = useState<Product | null>(null);
+  const [restoring, setRestoring] = useState<Product | null>(null);
   const [notice, setNotice] = useState('');
 
   const soldCount = useMemo(() => items.filter(isSoldItem).length, [items]);
@@ -180,7 +186,7 @@ export default function StagePanel({ stage, items, loading, identity, onSaved }:
         <p className="flex items-start gap-2 text-[11.5px] leading-relaxed text-accent-900">
           <i className="ri-information-line mt-0.5 text-[14px]"></i>
           {stage === 'sale'
-            ? '판매 완료로 저장하면 재고 목록에서는 숨겨지고, 판매 기록은 시트의 ‘판매 완료’ 탭에 자동으로 한 줄씩 남습니다. 그 시점의 환율도 함께 저장되어 이후 환율이 올라도 이 건의 정산은 그 값으로 유지됩니다. 잘못 판매 완료했다면 “기록 수정”에서 재고상태를 판매 가능으로 되돌려 저장하세요. 그러면 ‘판매 완료’ 탭의 기록과 고정 환율도 함께 정리됩니다.'
+            ? '판매 완료로 저장하면 재고 목록에서는 숨겨지고, 판매 기록은 시트의 ‘판매 완료’ 탭에 자동으로 한 줄씩 남습니다. 그 시점의 환율도 함께 저장되어 이후 환율이 올라도 이 건의 정산은 그 값으로 유지됩니다. 잘못 판매 완료했다면 판매 완료 목록에서 “목록으로”를 눌러 바로 되돌리거나, “수정”에서 재고상태를 판매 가능으로 바꿔 저장하세요. 그러면 ‘판매 완료’ 탭의 기록과 고정 환율도 함께 정리됩니다.'
             : '이 단계의 상태 변경은 “현재 재고” 화면에서 상품을 열어 수정·저장하면 시트에 기록됩니다. 박스·운송장 같은 세부 메모는 시트에서 직접 적어 주세요.'}
         </p>
       </div>
@@ -277,21 +283,40 @@ export default function StagePanel({ stage, items, loading, identity, onSaved }:
                     {product.priceOnRequest ? '가격 문의' : formatThb(product.price)}
                   </span>
                   {stage === 'sale' && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setNotice('');
-                        setSelling(product);
-                      }}
-                      className={`inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded border px-2 py-1 text-[11px] transition-colors ${
-                        sold
-                          ? 'border-background-300 text-foreground-700 hover:border-foreground-400'
-                          : 'border-primary-400 bg-primary-100 text-primary-800 hover:bg-primary-200'
-                      }`}
-                    >
-                      <i className={sold ? 'ri-edit-line' : 'ri-check-double-line'}></i>
-                      {sold ? '기록 수정' : '판매 완료'}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotice('');
+                          if (sold) {
+                            setEditing(product);
+                            return;
+                          }
+                          setSelling(product);
+                        }}
+                        className={`inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded border px-2 py-1 text-[11px] transition-colors ${
+                          sold
+                            ? 'border-background-300 text-foreground-700 hover:border-foreground-400'
+                            : 'border-primary-400 bg-primary-100 text-primary-800 hover:bg-primary-200'
+                        }`}
+                      >
+                        <i className={sold ? 'ri-edit-line' : 'ri-check-double-line'}></i>
+                        {sold ? '수정' : '판매 완료'}
+                      </button>
+                      {sold && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNotice('');
+                            setRestoring(product);
+                          }}
+                          className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded border border-secondary-400 bg-secondary-50 px-2 py-1 text-[11px] text-secondary-900 transition-colors hover:bg-secondary-100"
+                        >
+                          <i className="ri-arrow-go-back-line"></i>
+                          목록으로
+                        </button>
+                      )}
+                    </>
                   )}
                 </div>
               );
@@ -330,6 +355,26 @@ export default function StagePanel({ stage, items, loading, identity, onSaved }:
           onClose={() => setSelling(null)}
           onCompleted={(message) => {
             if (message) setNotice(message);
+            onSaved?.();
+          }}
+        />
+      )}
+
+      {editing && (
+        <ItemEditModal
+          product={editing}
+          rate={rate}
+          onClose={() => setEditing(null)}
+          onSaved={() => onSaved?.()}
+        />
+      )}
+
+      {restoring && (
+        <RestoreSaleModal
+          product={restoring}
+          onClose={() => setRestoring(null)}
+          onRestored={(message) => {
+            setNotice(message);
             onSaved?.();
           }}
         />

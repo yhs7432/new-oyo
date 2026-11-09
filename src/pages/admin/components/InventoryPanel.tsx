@@ -5,6 +5,7 @@ import { SHEET_EDIT_URL } from '@/config/admin';
 import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb, statusClass } from '@/pages/admin/utils';
 import ItemEditModal from '@/pages/admin/components/ItemEditModal';
+import RestoreSaleModal from '@/pages/admin/components/RestoreSaleModal';
 import { isWriterReady, updateSheetRows } from '@/services/sheetWrite';
 import { isSoldItem } from '@/utils/settlement';
 import {
@@ -36,6 +37,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
   const [pageSize, setPageSize] = useState(20);
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [restoring, setRestoring] = useState<Product | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [notice, setNotice] = useState('');
 
@@ -60,7 +62,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
   const toggleVisible = async (product: Product) => {
     if (isSoldItem(product)) {
       setNotice(
-        `${product.id} · 판매 완료 상품은 웹노출이 자동으로 N(숨김)으로 유지됩니다. 다시 노출하려면 “수정·저장”에서 재고상태를 판매 가능으로 바꿔 주세요. 저장하면 웹노출도 자동으로 Y로 복구됩니다.`,
+        `${product.id} · 판매 완료 상품은 웹노출이 자동으로 N(숨김)으로 유지됩니다. 다시 판매 목록으로 가져오려면 이 줄의 “판매 되돌리기”를 눌러 주세요.`,
       );
       return;
     }
@@ -232,6 +234,20 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
               {soldCount}
             </span>
           </label>
+          {soldCount > 0 && hideSold && (
+            <button
+              type="button"
+              onClick={() => {
+                setHideSold(false);
+                setStatus('판매 완료');
+                setExposure('all');
+              }}
+              className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded-md border border-secondary-400 bg-secondary-50 px-2.5 py-2 text-[11.5px] text-secondary-900 transition-colors hover:bg-secondary-100"
+            >
+              <i className="ri-arrow-go-back-line"></i>
+              판매 완료 {soldCount}건 보기
+            </button>
+          )}
         </div>
       </div>
 
@@ -391,6 +407,20 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
                           ></i>
                           {product.visible === false ? '노출' : '숨김'}
                         </button>
+                        {isSoldItem(product) && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setNotice('');
+                              setRestoring(product);
+                            }}
+                            title="판매 완료를 취소하고 홈페이지 판매 목록으로 되돌립니다"
+                            className="inline-flex cursor-pointer items-center gap-1 whitespace-nowrap rounded border border-secondary-400 bg-secondary-50 px-2 py-1 text-[11px] text-secondary-900 transition-colors hover:bg-secondary-100"
+                          >
+                            <i className="ri-arrow-go-back-line"></i>
+                            판매 되돌리기
+                          </button>
+                        )}
                         <Link
                           to={`/products/${product.id}`}
                           className="cursor-pointer whitespace-nowrap rounded border border-background-300 px-2 py-1 text-[11px] text-foreground-800 transition-colors hover:border-foreground-400"
@@ -499,6 +529,17 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
           rate={rate}
           onClose={() => setSelectedId(null)}
           onSaved={onRetry}
+        />
+      )}
+
+      {restoring && (
+        <RestoreSaleModal
+          product={restoring}
+          onClose={() => setRestoring(null)}
+          onRestored={(message) => {
+            setNotice(message);
+            onRetry();
+          }}
         />
       )}
     </div>
