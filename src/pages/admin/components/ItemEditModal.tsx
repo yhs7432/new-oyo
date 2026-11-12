@@ -4,7 +4,10 @@ import { useFxRate } from '@/hooks/useFxRate';
 import { formatFxRate } from '@/services/fxRate';
 import { archiveSaleEntry, deleteSheetRows, removeSaleArchiveEntries, updateSheetRows } from '@/services/sheetWrite';
 import {
+  CATEGORY_TO_SHEET,
   GRADE_OPTIONS,
+  SHEET_CATEGORY_LABELS,
+  SHEET_CATEGORY_OPTIONS,
   STOCK_STATUS_OPTIONS,
   conditionToSheet,
   formatKrw,
@@ -13,6 +16,7 @@ import {
   numericValue,
   parsePhotoUrls,
   statusClass,
+  typeFromSheetCategory,
 } from '@/pages/admin/utils';
 import {
   CATEGORY_LABEL,
@@ -121,7 +125,18 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
   const initialSpecialPrice = readNoteValue(originalNote, SPECIAL_PRICE).replace(/[^0-9]/g, '');
   const [special, setSpecial] = useState(initialSpecial);
   const [specialPrice, setSpecialPrice] = useState(initialSpecialPrice);
-  const isClub = isClubType(product.type);
+
+  /** 시트 ‘카테고리’ 칸 값입니다. 잘못 등록된 상품을 바로잡을 수 있도록 수정 창에서 직접 고칩니다. */
+  const rawCategoryValue = (raw['카테고리'] ?? '').trim();
+  const initialCategory =
+    SHEET_CATEGORY_OPTIONS.find(
+      (option) => option.toLowerCase() === rawCategoryValue.toLowerCase(),
+    ) ??
+    CATEGORY_TO_SHEET[product.type] ??
+    CATEGORY_TO_SHEET.accessory;
+  const [category, setCategory] = useState(initialCategory);
+  /** 선택한 카테고리를 기준으로 골프채/액세서리를 다시 판단합니다. */
+  const isClub = isClubType(typeFromSheetCategory(category));
 
   const [state, setState] = useState<SaveState>('idle');
   const [channel, setChannel] = useState(archivedChannel);
@@ -179,6 +194,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     brand !== (raw['브랜드'] ?? product.brand) ||
     name !== (raw['상품명'] ?? product.name.en) ||
     spec !== (raw['사양'] ?? product.spec) ||
+    category !== initialCategory ||
     price !== (raw['판매가격(THB)'] ?? String(product.price || '')) ||
     cost !== (raw['한국원가(KRW)'] ?? '') ||
     krPrice !== initialKrPrice ||
@@ -238,6 +254,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
       isSoldStatus(stockStatus) && rateToFreeze > 0 ? String(rateToFreeze) : null,
     );
     const fields: Record<string, string | number> = {
+      카테고리: category,
       브랜드: brand.trim(),
       상품명: name.trim(),
       사양: spec.trim(),
@@ -403,6 +420,24 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             <label className="block min-w-0 sm:col-span-2">
               <span className={labelClass}>사양</span>
               <input value={spec} onChange={(event) => setSpec(event.target.value)} className={inputClass} />
+            </label>
+            <label className="block min-w-0 sm:col-span-2">
+              <span className={labelClass}>상품 카테고리 (시트 ‘카테고리’ 칸)</span>
+              <select
+                value={category}
+                onChange={(event) => setCategory(event.target.value)}
+                className={`${inputClass} cursor-pointer`}
+              >
+                {SHEET_CATEGORY_OPTIONS.map((option) => (
+                  <option key={option} value={option}>
+                    {SHEET_CATEGORY_LABELS[option] ?? option} · {option}
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1 block text-[10px] leading-relaxed text-foreground-500">
+                잘못 등록된 상품을 바로잡을 때 사용합니다. 골프채(드라이버·우드·아이언·유틸리티·웨지·퍼터·풀세트)는 중고 상품,
+                가방·액세서리는 액세서리 페이지로 분류됩니다. 저장 후 홈페이지 반영까지 10~30초 걸릴 수 있습니다.
+              </span>
             </label>
             <label className="block min-w-0">
               <span className={labelClass}>판매가격 (THB)</span>

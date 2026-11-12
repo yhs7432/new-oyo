@@ -121,6 +121,7 @@ export default {
     iron: 'Iron Set',
     wedge: 'Wedge',
     putter: 'Putter',
+    fullset: 'Full Set',
     utility: 'Utility',
     bag: 'Bag',
     accessory: 'Accessory',

@@ -29,6 +29,7 @@ export const typeOptions: ProductType[] = [
   'utility',
   'wedge',
   'putter',
+  'fullset',
   'bag',
   'accessory',
 ];

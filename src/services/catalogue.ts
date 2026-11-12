@@ -15,6 +15,8 @@ const FALLBACK_IMAGES: Record<ProductType, string> = {
     'https://readdy.ai/api/search-image?query=Studio%20product%20photograph%20of%20a%20single%20satin%20steel%20golf%20wedge%20club%20on%20a%20soft%20warm%20beige%20seamless%20background%2C%20soft%20diffused%20studio%20light%2C%20gentle%20shadow%2C%20minimal%20editorial%20catalogue%20style%2C%20high%20detail&width=800&height=1000&seq=oyogolf-fallback-wedge&orientation=portrait',
   putter:
     'https://readdy.ai/api/search-image?query=Studio%20product%20photograph%20of%20a%20silver%20blade%20golf%20putter%20lying%20diagonally%20on%20a%20soft%20warm%20beige%20seamless%20background%2C%20soft%20diffused%20studio%20light%2C%20gentle%20shadow%2C%20minimal%20editorial%20catalogue%20style%2C%20high%20detail&width=800&height=1000&seq=oyogolf-fallback-putter&orientation=portrait',
+  fullset:
+    'https://readdy.ai/api/search-image?query=Studio%20product%20photograph%20of%20a%20complete%20golf%20club%20set%20arranged%20in%20a%20row%2C%20driver%2C%20fairway%20wood%2C%20irons%20and%20putter%20with%20matching%20bag%2C%20soft%20warm%20beige%20seamless%20background%2C%20soft%20diffused%20studio%20light%2C%20gentle%20shadow%2C%20minimal%20editorial%20catalogue%20style%2C%20high%20detail&width=800&height=1000&seq=oyogolf-fallback-fullset&orientation=portrait',
   bag:
     'https://readdy.ai/api/search-image?query=Studio%20product%20photograph%20of%20a%20golf%20caddie%20bag%20standing%20upright%20on%20a%20soft%20warm%20beige%20seamless%20background%2C%20soft%20diffused%20studio%20light%2C%20gentle%20shadow%2C%20minimal%20editorial%20catalogue%20style%2C%20high%20detail&width=800&height=1000&seq=oyogolf-fallback-bag&orientation=portrait',
   accessory:
@@ -50,6 +52,7 @@ const TYPE_MAP: Record<string, ProductType> = {
   utility: 'utility',
   wedge: 'wedge',
   putter: 'putter',
+  fullset: 'fullset',
   bag: 'bag',
   accessories: 'accessory',
   accessory: 'accessory',

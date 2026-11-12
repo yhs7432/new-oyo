@@ -121,6 +121,7 @@ export default {
     iron: '아이언 세트',
     wedge: '웨지',
     putter: '퍼터',
+    fullset: '풀세트',
     utility: '유틸리티',
     bag: '백',
     accessory: '액세서리',

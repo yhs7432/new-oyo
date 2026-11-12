@@ -152,7 +152,7 @@ export default function RegisterPanel({ items, onSaved }: Props) {
 
       <p className="mt-4 rounded-lg border border-secondary-300/70 bg-secondary-50 px-4 py-3 text-[11.5px] leading-relaxed text-secondary-900">
         <i className="ri-price-tag-3-line mr-1"></i>
-        골프채(드라이버·우드·아이언·유틸·웨지·퍼터)는 중고 상품으로, 가방·그립·볼·거리측정기 같은
+        골프채(드라이버·우드·아이언·유틸·웨지·퍼터·풀세트)는 중고 상품으로, 가방·그립·볼·거리측정기 같은
         골프채 외 상품은 액세서리로 자동 분류됩니다. 등록 후
         <strong className="font-medium"> 현재 재고</strong> 화면에서 <strong className="font-medium">특가</strong>
         버튼을 누르면 특가 상품 페이지로 옮겨집니다.
@@ -224,7 +224,7 @@ export default function RegisterPanel({ items, onSaved }: Props) {
                 ))}
               </select>
               <span className="mt-1 block text-[10.5px] leading-relaxed text-foreground-500">
-                골프채 6종은 중고 상품, Bag·Accessories는 액세서리로 등록됩니다.
+                골프채 7종(풀세트 포함)은 중고 상품, Bag·Accessories는 액세서리로 등록됩니다.
               </span>
             </label>
             <label className="block min-w-0">

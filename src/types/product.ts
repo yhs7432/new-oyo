@@ -7,6 +7,7 @@ export type ProductType =
   | 'utility'
   | 'wedge'
   | 'putter'
+  | 'fullset'
   | 'bag'
   | 'accessory';
 

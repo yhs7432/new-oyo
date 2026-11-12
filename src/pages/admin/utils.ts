@@ -1,3 +1,5 @@
+import type { ProductType } from '@/types/product';
+
 export function formatThb(value: number): string {
   return `฿ ${Math.round(value).toLocaleString('en-US')}`;
 }
@@ -34,11 +36,34 @@ export const CATEGORY_TO_SHEET: Record<string, string> = {
   utility: 'Utility',
   wedge: 'Wedge',
   putter: 'Putter',
+  fullset: 'FullSet',
   bag: 'Bag',
   accessory: 'Accessories',
 };
 
 export const SHEET_CATEGORY_OPTIONS = Object.values(CATEGORY_TO_SHEET);
+
+/** 관리자 화면에서 보여 줄 카테고리 한글 이름입니다. 시트에는 영문 값이 그대로 들어갑니다. */
+export const SHEET_CATEGORY_LABELS: Record<string, string> = {
+  Driver: '드라이버',
+  Wood: '우드',
+  Iron: '아이언',
+  Utility: '유틸리티',
+  Wedge: '웨지',
+  Putter: '퍼터',
+  FullSet: '풀세트',
+  Bag: '가방',
+  Accessories: '액세서리',
+};
+
+/** 시트의 카테고리 영문 값을 앱 내부 상품 타입으로 되돌립니다. */
+export function typeFromSheetCategory(value: string): ProductType {
+  const key = value.trim().toLowerCase();
+  const found = Object.entries(CATEGORY_TO_SHEET).find(
+    ([, sheetValue]) => sheetValue.toLowerCase() === key,
+  );
+  return (found?.[0] as ProductType | undefined) ?? 'accessory';
+}
 
 export const GRADE_OPTIONS = ['S', 'A+', 'A', 'B', 'C'];
 

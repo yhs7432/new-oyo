@@ -121,6 +121,7 @@ export default {
     iron: 'ชุดเหล็ก',
     wedge: 'เวดจ์',
     putter: 'พัตเตอร์',
+    fullset: 'ชุดเต็ม',
     utility: 'ยูทิลิตี้',
     bag: 'กระเป๋ากอล์ฟ',
     accessory: 'อุปกรณ์เสริม',

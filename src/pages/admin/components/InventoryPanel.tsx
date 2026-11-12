@@ -28,6 +28,18 @@ interface Props {
 
 const PAGE_SIZES = [20, 50, 100];
 
+const TYPE_LABEL: Record<string, string> = {
+  driver: '드라이버',
+  wood: '우드',
+  iron: '아이언',
+  utility: '유틸리티',
+  wedge: '웨지',
+  putter: '퍼터',
+  fullset: '풀세트',
+  bag: '가방',
+  accessory: '액세서리',
+};
+
 export default function InventoryPanel({ items, loading, error, onRetry }: Props) {
   const { rate } = useFxRate();
   const [query, setQuery] = useState('');
@@ -187,7 +199,7 @@ export default function InventoryPanel({ items, loading, error, onRetry }: Props
             <option value="all">전체 종류</option>
             {typeOptions.map((option) => (
               <option key={option} value={option}>
-                {option === 'accessory' ? '액세서리' : option === 'bag' ? '가방' : option}
+                {TYPE_LABEL[option] ?? option}
               </option>
             ))}
           </select>

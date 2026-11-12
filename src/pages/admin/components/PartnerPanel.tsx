@@ -22,6 +22,7 @@ const TYPE_LABEL: Record<string, string> = {
   utility: '유틸리티',
   wedge: '웨지',
   putter: '퍼터',
+  fullset: '풀세트',
   bag: '백',
   accessory: '액세서리',
 };

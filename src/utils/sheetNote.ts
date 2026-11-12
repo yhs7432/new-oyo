@@ -35,7 +35,7 @@ export const KR_PRICE = '한국판매가';
 export const FX_RATE = '환율';
 
 /** Club types — everything else (bag, accessories) belongs to 액세서리. */
-const CLUB_TYPES: ProductType[] = ['driver', 'wood', 'iron', 'utility', 'wedge', 'putter'];
+const CLUB_TYPES: ProductType[] = ['driver', 'wood', 'iron', 'utility', 'wedge', 'putter', 'fullset'];
 
 export function isClubType(type: ProductType): boolean {
   return CLUB_TYPES.includes(type);
