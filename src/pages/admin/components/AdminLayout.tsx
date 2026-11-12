@@ -17,6 +17,9 @@ interface Props {
   children: ReactNode;
 }
 
+/** 배포된 화면이 최신 빌드인지 눈으로 확인하기 위한 표시입니다. 화면을 수정할 때마다 값을 바꿔 주세요. */
+const ADMIN_UI_VERSION = '2026-11-12-a';
+
 export default function AdminLayout({
   tab,
   identity,
@@ -87,6 +90,9 @@ export default function AdminLayout({
             <p className="truncate text-[12px] font-medium text-background-50">{identity.name}</p>
             <p className="mt-0.5 text-[10.5px] text-primary-400">{ROLE_LABEL[identity.role]}</p>
           </div>
+          <p className="mt-2 px-3 text-[9.5px] uppercase tracking-[0.14em] text-background-500">
+            화면 버전 {ADMIN_UI_VERSION}
+          </p>
           <button
             type="button"
             onClick={onLogout}
