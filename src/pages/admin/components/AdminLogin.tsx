@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { roleFromCode } from '@/config/admin';
+import { ADMIN_UI_VERSION, roleFromCode } from '@/config/admin';
 import type { AuthResult, SignInPayload, SignUpPayload } from '@/pages/admin/hooks/useAdminAuth';
 
 interface Props {
@@ -397,7 +397,7 @@ export default function AdminLogin({ onSignIn, onSignUp }: Props) {
           )}
         </div>
 
-        <div className="mt-6 flex items-center justify-center gap-4 text-[12px]">
+        <div className="mt-6 flex flex-col items-center justify-center gap-3 text-[12px]">
           <Link
             to="/"
             className="inline-flex cursor-pointer items-center gap-1.5 text-background-300 transition-colors hover:text-primary-400"
@@ -405,6 +405,9 @@ export default function AdminLogin({ onSignIn, onSignUp }: Props) {
             <i className="ri-arrow-left-line"></i>
             사이트로
           </Link>
+          <p className="rounded-full bg-background-50/10 px-3 py-1 text-[9.5px] uppercase tracking-[0.16em] text-background-400">
+            화면 버전 {ADMIN_UI_VERSION}
+          </p>
         </div>
       </div>
     </div>

@@ -1,9 +1,11 @@
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
+import useIsThai from '@/hooks/useIsThai';
 import { categories, benefits } from '@/mocks/home';
 
 export default function Hero() {
   const { t } = useTranslation();
+  const isThai = useIsThai();
 
   return (
     <section id="home" className="relative bg-foreground-950">
@@ -20,19 +22,39 @@ export default function Hero() {
 
       <div className="relative mx-auto w-full max-w-[1320px] px-5 pb-14 pt-32 md:px-10 md:pb-20 md:pt-48">
         <div className="max-w-2xl fade-up">
-          <p className="mb-6 flex items-center gap-3 text-[10px] uppercase tracking-[0.32em] text-primary-300 md:text-[11px]">
-            <span className="inline-block h-px w-8 bg-primary-400"></span>
+          <p
+            className={`mb-6 flex items-center gap-3 text-[10px] uppercase text-primary-300 md:text-[11px] ${
+              isThai ? 'tracking-[0.04em] leading-[1.7]' : 'tracking-[0.32em]'
+            }`}
+          >
+            <span className="inline-block h-px w-8 shrink-0 bg-primary-400"></span>
             {t('hero.eyebrow')}
           </p>
-          <h1 className="font-heading text-[34px] leading-[1.18] text-background-50 md:text-6xl md:leading-[1.14]">
+          <h1
+            className={`break-words font-heading text-background-50 ${
+              isThai
+                ? 'text-[29px] leading-[1.5] tracking-[0] md:text-[46px] md:leading-[1.42]'
+                : 'text-[34px] leading-[1.18] md:text-6xl md:leading-[1.14]'
+            }`}
+          >
             {t('hero.title1')}
             <br />
             <span className="text-primary-400">{t('hero.title2')}</span>
           </h1>
-          <p className="mt-6 max-w-xl text-[13.5px] leading-[1.85] text-background-200 md:text-[15px]">
+          <p
+            className={`max-w-xl text-background-200 ${
+              isThai
+                ? 'mt-7 text-[13.5px] leading-[2] md:text-[15px] md:leading-[1.95]'
+                : 'mt-6 text-[13.5px] leading-[1.85] md:text-[15px]'
+            }`}
+          >
             {t('hero.desc')}
           </p>
-          <div className="mt-9 flex flex-col items-start gap-4 sm:flex-row sm:items-center">
+          <div
+            className={`flex flex-col items-start gap-4 sm:flex-row sm:items-center ${
+              isThai ? 'mt-10' : 'mt-9'
+            }`}
+          >
             <Link
               to="/products"
               className="inline-flex cursor-pointer items-center gap-2.5 whitespace-nowrap rounded-full bg-primary-500 px-6 py-3 text-[13px] font-medium text-foreground-950 transition-colors hover:bg-primary-400"
@@ -69,11 +91,19 @@ export default function Hero() {
                 />
               </div>
               <div className="flex items-start justify-between gap-3 px-5 py-5">
-                <div>
-                  <h2 className="font-heading text-[17px] text-background-50 md:text-lg">
+                <div className="min-w-0">
+                  <h2
+                    className={`break-words font-heading text-[17px] text-background-50 md:text-lg ${
+                      isThai ? 'leading-[1.6] tracking-[0]' : ''
+                    }`}
+                  >
                     {t(`categories.${c.key}.title`)}
                   </h2>
-                  <p className="mt-1.5 text-[11.5px] leading-relaxed text-background-300">
+                  <p
+                    className={`mt-1.5 break-words text-[11.5px] text-background-300 ${
+                      isThai ? 'leading-[1.9]' : 'leading-relaxed'
+                    }`}
+                  >
                     {t(`categories.${c.key}.desc`)}
                   </p>
                 </div>
@@ -97,10 +127,18 @@ export default function Hero() {
                 <i className={b.icon}></i>
               </span>
               <div>
-                <strong className="block text-[13px] font-medium text-background-50">
+                <strong
+                  className={`block break-words text-[13px] font-medium text-background-50 ${
+                    isThai ? 'leading-[1.75]' : ''
+                  }`}
+                >
                   {t(`benefits.${b.key}.title`)}
                 </strong>
-                <p className="mt-0.5 text-[11.5px] text-background-400">
+                <p
+                  className={`mt-0.5 break-words text-[11.5px] text-background-400 ${
+                    isThai ? 'leading-[1.85]' : ''
+                  }`}
+                >
                   {t(`benefits.${b.key}.desc`)}
                 </p>
               </div>

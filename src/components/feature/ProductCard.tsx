@@ -7,7 +7,7 @@ import { fallbackImage } from '@/services/catalogue';
 
 export default function ProductCard({ product }: { product: Product }) {
   const { t, i18n } = useTranslation();
-  const lang = i18n.resolvedLanguage || 'en';
+  const lang = i18n.resolvedLanguage || 'th';
   const discount = discountPercent(product);
   const soldOut = product.stock <= 0;
   const reserved = product.stockStatus === '예약';

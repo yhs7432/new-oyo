@@ -36,7 +36,7 @@ export const steps = [
 ];
 
 export const languages = [
-  { code: 'en', label: 'EN' },
   { code: 'th', label: 'ไทย' },
+  { code: 'en', label: 'EN' },
   { code: 'ko', label: '한국어' },
 ];

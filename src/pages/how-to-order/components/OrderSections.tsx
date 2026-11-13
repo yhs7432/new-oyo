@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router-dom';
 import { lineChannel } from '@/config/channels';
+import useIsThai from '@/hooks/useIsThai';
 
 const stepsByPath = {
   partner: [
@@ -38,6 +39,7 @@ const faqKeys = ['q1', 'q2', 'q3', 'q4', 'q5'];
 
 export function OrderSteps() {
   const { t } = useTranslation();
+  const isThai = useIsThai();
   const [path, setPath] = useState<PathKey>('partner');
   const steps = stepsByPath[path];
   const lineStepKey = path === 'partner' ? 'three' : 'two';
@@ -46,12 +48,18 @@ export function OrderSteps() {
     <section className="bg-background-50 px-5 py-14 md:px-10 md:py-20">
       <div className="mx-auto w-full max-w-[1320px]">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <h2 className="font-heading text-[24px] leading-[1.35] text-foreground-950 md:text-[32px]">
+          <h2
+            className={`break-words font-heading text-foreground-950 md:text-[32px] ${
+              isThai ? 'text-[23px] leading-[1.55]' : 'text-[24px] leading-[1.35]'
+            }`}
+          >
             {t('orderPage.stepsTitle')}
           </h2>
-          <p className="max-w-md text-[12.5px] leading-[1.8] text-foreground-600 sm:text-right">
-            <span className="block break-keep">{t('orderPage.leadLine1')}</span>
-            <span className="mt-1 block break-keep text-foreground-500">{t('orderPage.leadLine2')}</span>
+          <p className="max-w-md break-words text-[12.5px] leading-[1.8] text-foreground-600 sm:text-right">
+            <span className={`block ${isThai ? '' : 'break-keep'}`}>{t('orderPage.leadLine1')}</span>
+            <span className={`mt-1 block text-foreground-500 ${isThai ? '' : 'break-keep'}`}>
+              {t('orderPage.leadLine2')}
+            </span>
           </p>
         </div>
 
@@ -78,7 +86,7 @@ export function OrderSteps() {
               );
             })}
           </div>
-          <p className="text-[11.5px] leading-relaxed text-foreground-500">
+          <p className="break-words text-[11.5px] leading-relaxed text-foreground-500">
             {t(`orderPage.pathNotes.${path}`)}
           </p>
         </div>
@@ -110,16 +118,16 @@ export function OrderSteps() {
                 </span>
               </div>
               <h3
-                className={`mt-5 font-heading text-[17px] leading-snug ${
-                  index === 0 ? 'text-background-50' : 'text-foreground-950'
-                }`}
+                className={`mt-5 break-words font-heading text-[17px] ${
+                  isThai ? 'leading-[1.65]' : 'leading-snug'
+                } ${index === 0 ? 'text-background-50' : 'text-foreground-950'}`}
               >
                 {t(`orderPage.steps.${path}.${step.key}.title`)}
               </h3>
               <p
-                className={`mt-2 text-[12.5px] leading-[1.85] ${
-                  index === 0 ? 'text-background-100' : 'text-foreground-600'
-                }`}
+                className={`mt-2 break-words text-[12.5px] ${
+                  isThai ? 'leading-[1.95]' : 'leading-[1.85]'
+                } ${index === 0 ? 'text-background-100' : 'text-foreground-600'}`}
               >
                 {t(`orderPage.steps.${path}.${step.key}.desc`)}
               </p>
@@ -128,26 +136,26 @@ export function OrderSteps() {
                   href={lineChannel?.href ?? LINE_FALLBACK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className={`mt-4 inline-flex cursor-pointer items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] transition-colors ${
+                  className={`mt-4 inline-flex max-w-full cursor-pointer items-start gap-1.5 rounded-full px-3 py-1.5 text-left text-[10.5px] leading-[1.6] transition-colors ${
                     index === 0
                       ? 'bg-background-50/15 text-background-50 hover:bg-background-50/25'
                       : 'bg-background-200/70 text-foreground-700 hover:bg-background-200'
                   }`}
                 >
-                  <i className="ri-information-line text-[12px]"></i>
-                  {t(`orderPage.steps.${path}.${step.key}.note`)}
-                  <i className="ri-arrow-right-up-line text-[11px]"></i>
+                  <i className="ri-information-line mt-0.5 shrink-0 text-[12px]"></i>
+                  <span className="min-w-0 break-words">{t(`orderPage.steps.${path}.${step.key}.note`)}</span>
+                  <i className="ri-arrow-right-up-line mt-0.5 shrink-0 text-[11px]"></i>
                 </a>
               ) : (
                 <p
-                  className={`mt-4 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10.5px] ${
+                  className={`mt-4 inline-flex max-w-full items-start gap-1.5 rounded-full px-3 py-1.5 text-[10.5px] leading-[1.6] ${
                     index === 0
                       ? 'bg-background-50/15 text-background-50'
                       : 'bg-background-200/70 text-foreground-700'
                   }`}
                 >
-                  <i className="ri-information-line text-[12px]"></i>
-                  {t(`orderPage.steps.${path}.${step.key}.note`)}
+                  <i className="ri-information-line mt-0.5 shrink-0 text-[12px]"></i>
+                  <span className="min-w-0 break-words">{t(`orderPage.steps.${path}.${step.key}.note`)}</span>
                 </p>
               )}
             </li>
@@ -160,21 +168,36 @@ export function OrderSteps() {
 
 export function OrderTerms() {
   const { t } = useTranslation();
+  const isThai = useIsThai();
 
   return (
     <section className="border-y border-background-200 bg-background-100 px-5 py-12 md:px-10 md:py-16">
       <div className="mx-auto w-full max-w-[1320px]">
-        <h2 className="text-[10px] uppercase tracking-[0.3em] text-foreground-500">{t('orderPage.termsTitle')}</h2>
+        <h2
+          className={`text-[10px] uppercase text-foreground-500 ${
+            isThai ? 'leading-[1.7] tracking-[0.04em]' : 'tracking-[0.3em]'
+          }`}
+        >
+          {t('orderPage.termsTitle')}
+        </h2>
         <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-5 lg:grid-cols-4">
           {terms.map((term) => (
             <article key={term.key} className="rounded-lg border border-background-200 bg-background-50 p-5">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-100 text-[15px] text-accent-900">
                 <i className={term.icon}></i>
               </span>
-              <h3 className="mt-4 font-heading text-[15px] text-foreground-950">
+              <h3
+                className={`mt-4 break-words font-heading text-[15px] text-foreground-950 ${
+                  isThai ? 'leading-[1.65]' : ''
+                }`}
+              >
                 {t(`orderPage.terms.${term.key}.title`)}
               </h3>
-              <p className="mt-2 text-[12px] leading-[1.85] text-foreground-600">
+              <p
+                className={`mt-2 break-words text-[12px] text-foreground-600 ${
+                  isThai ? 'leading-[1.95]' : 'leading-[1.85]'
+                }`}
+              >
                 {t(`orderPage.terms.${term.key}.desc`)}
               </p>
             </article>
@@ -187,12 +210,17 @@ export function OrderTerms() {
 
 export function OrderFaq() {
   const { t } = useTranslation();
+  const isThai = useIsThai();
   const [open, setOpen] = useState<string | null>('q1');
 
   return (
     <section className="bg-background-50 px-5 py-14 md:px-10 md:py-20">
       <div className="mx-auto w-full max-w-[1000px]">
-        <h2 className="font-heading text-[24px] leading-[1.35] text-foreground-950 md:text-[32px]">
+        <h2
+          className={`break-words font-heading text-foreground-950 md:text-[32px] ${
+            isThai ? 'text-[23px] leading-[1.55]' : 'text-[24px] leading-[1.35]'
+          }`}
+        >
           {t('orderPage.faqTitle')}
         </h2>
         <div className="mt-7 divide-y divide-background-200 border-y border-background-200">
@@ -206,7 +234,7 @@ export function OrderFaq() {
                   aria-expanded={isOpen}
                   className="flex w-full cursor-pointer items-center justify-between gap-4 py-4 text-left"
                 >
-                  <span className="text-[13.5px] font-medium text-foreground-900">
+                  <span className={`min-w-0 flex-1 break-words text-[13.5px] font-medium text-foreground-900 ${isThai ? 'leading-[1.7]' : ''}`}>
                     {t(`orderPage.faq.${key}.q`)}
                   </span>
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-background-300 text-[13px] text-foreground-600">
@@ -214,7 +242,7 @@ export function OrderFaq() {
                   </span>
                 </button>
                 {isOpen && (
-                  <p className="pb-4 pr-10 text-[12.5px] leading-[1.9] text-foreground-600">
+                  <p className="break-words pb-4 pr-10 text-[12.5px] leading-[1.9] text-foreground-600">
                     {t(`orderPage.faq.${key}.a`)}
                   </p>
                 )}

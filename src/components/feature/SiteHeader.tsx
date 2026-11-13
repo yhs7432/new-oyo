@@ -19,7 +19,7 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
   const [langOpen, setLangOpen] = useState(false);
   const langRef = useRef<HTMLDivElement>(null);
 
-  const current = (i18n.resolvedLanguage || 'en').slice(0, 2);
+  const current = (i18n.resolvedLanguage || 'th').slice(0, 2);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40);
@@ -121,7 +121,7 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
               <span className="flex h-3.5 w-3.5 items-center justify-center">
                 <i className="ri-global-line text-[13px]"></i>
               </span>
-              {languages.find((l) => l.code === current)?.label ?? 'EN'}
+              {languages.find((l) => l.code === current)?.label ?? 'ไทย'}
               <i className={`ri-arrow-down-s-line text-[13px] transition-transform ${langOpen ? 'rotate-180' : ''}`}></i>
             </button>
             {langOpen && (
@@ -163,14 +163,14 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
       </div>
 
       {open && (
-        <div className="border-t border-background-200 bg-background-50 px-5 pb-6 pt-4 md:hidden">
+        <div className="max-h-[calc(100dvh-5rem)] overflow-y-auto overscroll-contain border-t border-background-200 bg-background-50 px-5 pb-8 pt-4 md:hidden">
           <nav className="flex flex-col divide-y divide-background-200">
             {links.map((l) => (
               <Link
                 key={l.to}
                 to={l.to}
                 onClick={() => setOpen(false)}
-                className="py-3 text-sm text-foreground-800"
+                className="break-words py-3 text-sm leading-relaxed text-foreground-800"
               >
                 {t(l.key)}
               </Link>
@@ -180,14 +180,14 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
             <Link
               to="/admin"
               onClick={() => setOpen(false)}
-              className="flex flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-foreground-900 py-2.5 text-xs text-foreground-900"
+              className="flex min-w-0 flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-md border border-foreground-900 px-2 py-2.5 text-xs text-foreground-900"
             >
               {t('nav.login')}
             </Link>
             <Link
               to="/partner"
               onClick={() => setOpen(false)}
-              className="flex flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-md bg-primary-500 py-2.5 text-xs font-medium text-foreground-950"
+              className="flex min-w-0 flex-1 cursor-pointer items-center justify-center whitespace-nowrap rounded-md bg-primary-500 px-2 py-2.5 text-xs font-medium text-foreground-950"
             >
               {t('nav.partner')}
             </Link>
@@ -196,13 +196,13 @@ export default function SiteHeader({ overlay = false }: { overlay?: boolean }) {
             <p className="mb-2 text-[11px] uppercase tracking-[0.2em] text-foreground-500">
               {t('nav.language')}
             </p>
-            <div className="inline-flex gap-1 rounded-full border border-background-300 p-1">
+            <div className="flex w-full flex-wrap gap-1 rounded-full border border-background-300 p-1">
               {languages.map((l) => (
                 <button
                   key={l.code}
                   type="button"
                   onClick={() => changeLanguage(l.code)}
-                  className={`cursor-pointer whitespace-nowrap rounded-full px-3 py-1.5 text-xs transition-colors ${
+                  className={`min-w-0 flex-1 cursor-pointer whitespace-nowrap rounded-full px-3 py-1.5 text-center text-xs transition-colors ${
                     current === l.code
                       ? 'bg-foreground-900 text-background-50'
                       : 'text-foreground-700 hover:bg-background-100'

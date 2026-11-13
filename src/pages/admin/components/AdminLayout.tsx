@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { AdminIdentity, AdminTab } from '@/config/admin';
-import { ADMIN_TABS, ROLE_LABEL, isInternalRole, tabsForRole } from '@/config/admin';
+import { ADMIN_TABS, ADMIN_UI_VERSION, ROLE_LABEL, isInternalRole, tabsForRole } from '@/config/admin';
 import SheetSyncBadge from '@/pages/admin/components/SheetSyncBadge';
 import FxRateControl from '@/pages/admin/components/FxRateControl';
 
@@ -16,9 +16,6 @@ interface Props {
   total: number;
   children: ReactNode;
 }
-
-/** 배포된 화면이 최신 빌드인지 눈으로 확인하기 위한 표시입니다. 화면을 수정할 때마다 값을 바꿔 주세요. */
-const ADMIN_UI_VERSION = '2026-11-12-a';
 
 export default function AdminLayout({
   tab,

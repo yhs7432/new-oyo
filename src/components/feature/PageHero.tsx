@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import useIsThai from '@/hooks/useIsThai';
 
 type Crumb = { label: string; to?: string };
 
@@ -21,6 +22,8 @@ export default function PageHero({
   image?: string;
   imageAlt?: string;
 }) {
+  const isThai = useIsThai();
+
   return (
     <section className="border-b border-background-200 bg-background-100 px-5 pb-10 pt-10 md:px-10 md:pb-14 md:pt-14">
       <div className="mx-auto w-full max-w-[1320px]">
@@ -41,20 +44,28 @@ export default function PageHero({
 
         <div className={`mt-6 flex flex-col gap-8 ${image ? 'lg:flex-row lg:items-center lg:gap-12' : ''}`}>
           <div className="flex-1">
-            <p className="flex items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-accent-600">
-              <span className="inline-block h-px w-7 bg-accent-500"></span>
+            <p
+              className={`flex items-center gap-3 text-[10px] uppercase text-accent-600 ${
+                isThai ? 'leading-[1.7] tracking-[0.04em]' : 'tracking-[0.3em]'
+              }`}
+            >
+              <span className="inline-block h-px w-7 shrink-0 bg-accent-500"></span>
               {eyebrow}
             </p>
-            <h1 className="mt-4 font-heading text-[28px] leading-[1.3] text-foreground-950 md:text-[40px] md:leading-[1.25]">
+            <h1
+              className={`mt-4 break-words font-heading text-foreground-950 md:text-[40px] ${
+                isThai ? 'text-[25px] leading-[1.55] md:leading-[1.45]' : 'text-[28px] leading-[1.3] md:leading-[1.25]'
+              }`}
+            >
               {title}
             </h1>
             {leadLine1 && leadLine2 ? (
-              <p className="mt-4 max-w-xl text-[13px] leading-[1.9] text-foreground-600 md:text-[14px]">
-                <span className="block break-keep">{leadLine1}</span>
-                <span className="mt-1 block break-keep text-foreground-500">{leadLine2}</span>
+              <p className="mt-4 max-w-xl break-words text-[13px] text-foreground-600 md:text-[14px] leading-[1.9]">
+                <span className={`block ${isThai ? '' : 'break-keep'}`}>{leadLine1}</span>
+                <span className={`mt-1 block text-foreground-500 ${isThai ? '' : 'break-keep'}`}>{leadLine2}</span>
               </p>
             ) : (
-              <p className="mt-4 max-w-xl text-[13px] leading-[1.9] text-foreground-600 md:text-[14px]">{lead}</p>
+              <p className="mt-4 max-w-xl break-words text-[13px] leading-[1.9] text-foreground-600 md:text-[14px]">{lead}</p>
             )}
           </div>
           {image && (

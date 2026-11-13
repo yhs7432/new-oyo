@@ -7,6 +7,12 @@ export const ADMIN_SESSION_KEY = 'oyogolf.admin.session';
 export const ADMIN_REMEMBER_KEY = 'oyogolf.admin.remember';
 export const ADMIN_FX_KEY = 'oyogolf.admin.fx';
 
+/**
+ * 배포된 화면이 최신 빌드인지 눈으로 확인하기 위한 표시입니다.
+ * 화면을 수정할 때마다 값을 바꿔 주세요.
+ */
+export const ADMIN_UI_VERSION = '2026-11-12-b';
+
 export const SHEET_EDIT_URL =
   'https://docs.google.com/spreadsheets/d/1iIvop4UcnSs7U_WJjvb2qLKeRWH9BbA9fb0FebsVgdw/edit#gid=1243559779';
 

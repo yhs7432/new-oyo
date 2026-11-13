@@ -10,14 +10,15 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    fallbackLng: 'en',
+    fallbackLng: 'th',
+    lng: 'th',
     supportedLngs: SUPPORTED_LANGUAGES,
     nonExplicitSupportedLngs: true,
     load: 'languageOnly',
     debug: false,
     resources: messages,
     detection: {
-      order: ['localStorage', 'navigator'],
+      order: ['localStorage'],
       lookupLocalStorage: 'oyo-golf-lang',
       caches: ['localStorage'],
     },
@@ -27,7 +28,7 @@ i18n
   });
 
 if (typeof document !== 'undefined') {
-  document.documentElement.lang = i18n.resolvedLanguage || 'en';
+  document.documentElement.lang = i18n.resolvedLanguage || 'th';
 }
 
 export default i18n;
