@@ -34,6 +34,10 @@ export interface SaleRecord {
   fee: number;
   /** 판매 시점에 고정된 환율(1바트 = ?원). 0이면 기록 없음. */
   rate: number;
+  /** 한국 판매 기준 판매가(KRW). 0이면 기록 없음. */
+  krPrice?: number;
+  /** 한국 판매 기준 순수익(KRW). 0이면 기록 없음. */
+  krNet?: number;
   channel?: string;
   staff?: string;
   memo?: string;

@@ -17,7 +17,8 @@ var TOKEN = 'oyogolf-sheet-2026';
 
 var ARCHIVE_HEADERS = [
   '판매일', '기록시각', '재고번호', '상품명', '브랜드', '카테고리', '중고등급', '상태(%)',
-  '판매가(THB)', '원가(KRW)', 'VAT(THB)', '웹수수료(THB)', '순수익(THB)', '판매채널', '담당자', '메모',
+  '판매가(THB)', '원가(KRW)', 'VAT(THB)', '웹수수료(THB)', '순수익(THB)',
+  '한국판매가(KRW)', '한국순수익(KRW)', '판매채널', '담당자', '메모',
   '환율'
 ];
 
@@ -296,6 +297,13 @@ function archiveSale_(entry) {
 
   var row = [];
   for (var c = 0; c < head.length; c += 1) row.push('');
+
+  // 이미 기록된 줄을 갱신할 때는 기존 값을 그대로 두고 넘어온 칸만 고칩니다.
+  if (target) {
+    var previousRow = sheet.getRange(target, 1, 1, head.length).getValues()[0];
+    for (var p = 0; p < head.length; p += 1) row[p] = previousRow[p];
+  }
+
   for (var key in entry) {
     if (!Object.prototype.hasOwnProperty.call(entry, key)) continue;
     if (map[key] === undefined) continue;

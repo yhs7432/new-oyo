@@ -177,6 +177,27 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
     parsedPrice > 0 ? Math.round((feeBahtValue / parsedPrice) * 1000) / 10 : 0;
   const netThb = parsedPrice - costThb - vatAmount - feeAmount;
   const marginPercent = parsedPrice > 0 ? Math.round((netThb / parsedPrice) * 100) : 0;
+
+  /** 한국 판매가(KRW) 입력값입니다. 입력하면 한국에서 판매한 경우의 순수익도 함께 계산합니다. */
+  const krPriceKrw = Number(String(krPrice).replace(/[^0-9]/g, '')) || 0;
+  /** 한국 판매가를 정산 환율로 태국 바트로 환산한 금액입니다. */
+  const krPriceThb = settlementRate > 0 ? krPriceKrw / settlementRate : 0;
+  /** 한국 판매 기준: VAT는 판매가의 %, 웹 수수료는 바트 금액을 원화로 환산해 그대로 차감합니다. */
+  const krVatKrw = (krPriceKrw * vatRateValue) / 100;
+  const krFeeKrw = feeBahtValue * settlementRate;
+  const krNetKrw = krPriceKrw - costKrw - krVatKrw - krFeeKrw;
+  const krNetThb = settlementRate > 0 ? krNetKrw / settlementRate : 0;
+  const krMarginPercent = krPriceKrw > 0 ? Math.round((krNetKrw / krPriceKrw) * 100) : 0;
+
+  /** 판매 완료 시트 기록 기준 금액입니다. THB 판매가가 비어 있으면 한국 판매가를 환산해 사용합니다. */
+  const archivePriceThb = parsedPrice > 0 ? parsedPrice : krPriceThb;
+  const archiveVatThb = (archivePriceThb * vatRateValue) / 100;
+  const archiveNetThb = archivePriceThb - costThb - archiveVatThb - feeBahtValue;
+  /** 판매 완료 시트에 남길 원화 판매가·한국 판매 순수익입니다. */
+  const archiveKrPrice =
+    krPriceKrw > 0 ? Math.round(krPriceKrw) : Math.round(archivePriceThb * settlementRate);
+  const archiveKrNet =
+    archiveKrPrice - costKrw - (archiveKrPrice * vatRateValue) / 100 - feeBahtValue * settlementRate;
   const isSold = (stockStatus ?? '').includes('완료');
 
   /** 재고상태가 '판매 완료' 계열이면 웹노출은 항상 N으로 맞춥니다. */
@@ -288,11 +309,13 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
         카테고리: CATEGORY_LABEL[nextCategory],
         중고등급: grade,
         '상태(%)': condition,
-        '판매가(THB)': parsedPrice,
+        '판매가(THB)': Math.round(archivePriceThb),
         '원가(KRW)': costKrw,
-        'VAT(THB)': Math.round(vatAmount),
-        '웹수수료(THB)': Math.round(feeAmount),
-        '순수익(THB)': Math.round(netThb),
+        'VAT(THB)': Math.round(archiveVatThb),
+        '웹수수료(THB)': Math.round(feeBahtValue),
+        '순수익(THB)': Math.round(archiveNetThb),
+        '한국판매가(KRW)': archiveKrPrice > 0 ? archiveKrPrice : '',
+        '한국순수익(KRW)': archiveKrPrice > 0 ? Math.round(archiveKrNet) : '',
         환율: rateToFreeze,
         판매채널: channel,
         담당자: staff.trim(),
@@ -312,6 +335,23 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
       setState('done');
       onSaved();
       return;
+    }
+
+    // 이미 판매 완료로 기록된 상품은 ‘판매 완료’ 탭의 원화 칸만 새로 채웁니다.
+    if (wasSold && isSoldStatus(stockStatus) && product.saleRecord && archiveKrPrice > 0) {
+      const krUpdate = await archiveSaleEntry({
+        재고번호: product.id,
+        '한국판매가(KRW)': archiveKrPrice,
+        '한국순수익(KRW)': Math.round(archiveKrNet),
+      });
+      if (!krUpdate.ok) {
+        setMessage(
+          `${result.message} 다만 ‘판매 완료’ 시트의 한국 판매가·한국 순수익 칸은 채우지 못했습니다 — ${krUpdate.message} 「시트 연동」 화면에서 스크립트를 최신 버전으로 다시 배포해 주세요.`,
+        );
+        setState('error');
+        onSaved();
+        return;
+      }
     }
 
     // 판매 완료 → 판매 가능으로 되돌리면 '판매 완료' 탭의 기록도 함께 지웁니다.
@@ -471,7 +511,9 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
               />
               <span className="mt-1 flex flex-wrap items-center justify-between gap-1 text-[10.5px] leading-relaxed text-foreground-500">
                 <span>
-                  {Number(krPrice) > 0 ? `입력값 ${formatKrw(Number(krPrice))}` : '비우면 환산값만 사용'}
+                  {krPriceKrw > 0
+                    ? `입력값 ${formatKrw(krPriceKrw)} · 순수익 ${formatKrw(krNetKrw)}`
+                    : '비우면 환산값만 사용'}
                 </span>
                 {parsedPrice > 0 && settlementRate > 0 && (
                   <button
@@ -522,7 +564,7 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
                 <i className="ri-information-line mr-1"></i>
                 VAT는 판매가의 %로, 웹 수수료는 실제로 내는 태국 바트(฿) 금액으로 넣어 주세요. 비워
                 두면 0으로 계산합니다. 한국 판매가는 당근마켓처럼 국내에 올릴 때 쓸 원화 금액이며,
-                비워 두면 환산 금액만 참고로 보입니다.
+                입력하면 그 금액 기준의 순수익도 함께 계산됩니다.
               </span>
             </div>
             <label className="block min-w-0">
@@ -802,20 +844,50 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
               </div>
             </dl>
 
-            <div className="mt-2.5 flex flex-wrap items-end justify-between gap-2 border-t border-background-300/60 pt-2.5">
-              <span className="text-[12px] font-medium text-foreground-900">예상 순수익</span>
-              <span className="text-right">
-                <strong
-                  className={`font-heading text-[16px] font-normal ${
-                    netThb >= 0 ? 'text-secondary-900' : 'text-accent-800'
-                  }`}
-                >
-                  {formatThb(netThb)}
-                </strong>
-                <span className="ml-1.5 text-[10.5px] text-foreground-500">
-                  {formatKrw(netThb * settlementRate)} · 마진 {marginPercent}%
+            <div className="mt-2.5 flex flex-col gap-2 border-t border-background-300/60 pt-2.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-foreground-900">
+                  예상 순수익
+                  <span className="rounded-full bg-secondary-100 px-1.5 py-0.5 text-[10px] text-secondary-900">
+                    태국 판매
+                  </span>
                 </span>
-              </span>
+                <span className="text-right">
+                  <strong
+                    className={`font-heading text-[16px] font-normal ${
+                      netThb >= 0 ? 'text-secondary-900' : 'text-accent-800'
+                    }`}
+                  >
+                    {formatThb(netThb)}
+                  </strong>
+                  <span className="ml-1.5 text-[10.5px] text-foreground-500">
+                    {formatKrw(netThb * settlementRate)} · 마진 {marginPercent}%
+                  </span>
+                </span>
+              </div>
+
+              {krPriceKrw > 0 && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-background-100/70 px-2.5 py-2">
+                  <span className="flex items-center gap-1.5 whitespace-nowrap text-[12px] font-medium text-foreground-900">
+                    예상 순수익
+                    <span className="rounded-full bg-accent-100 px-1.5 py-0.5 text-[10px] text-accent-900">
+                      한국 판매
+                    </span>
+                  </span>
+                  <span className="text-right">
+                    <strong
+                      className={`font-heading text-[16px] font-normal ${
+                        krNetKrw >= 0 ? 'text-secondary-900' : 'text-accent-800'
+                      }`}
+                    >
+                      {formatKrw(krNetKrw)}
+                    </strong>
+                    <span className="ml-1.5 text-[10.5px] text-foreground-500">
+                      {settlementRate > 0 ? `${formatThb(krNetThb)} · ` : ''}마진 {krMarginPercent}%
+                    </span>
+                  </span>
+                </div>
+              )}
             </div>
 
             <div className="mt-2.5 flex items-center justify-between gap-2 border-t border-background-300/60 pt-2 text-[12px]">
@@ -838,9 +910,10 @@ export default function ItemEditModal({ product, rate, onClose, onSaved }: Props
             </div>
             <p className="mt-2 text-[10.5px] leading-relaxed text-foreground-500">
               순수익 = 판매가 − 원가(THB 환산) − VAT(판매가의 %) − 웹 수수료(바트 직접 입력). 금액을
-              바꾸면 바로 다시 계산됩니다. 판매 완료로 저장하면 그 시점 환율이 함께 고정되어, 이후
-              환율이 올라도 이 상품의 원가는 바뀌지 않습니다. 동시에 시트의 ‘판매 완료’ 탭에도 이
-              내용이 한 줄로 기록됩니다.
+              바꾸면 바로 다시 계산됩니다. 한국 판매가(원화)를 입력하면 그 금액을 기준으로 한 순수익도
+              함께 표시되며, VAT와 웹 수수료는 그대로 차감해 원화로 환산합니다. 판매 완료로 저장하면 그
+              시점 환율이 함께 고정되어, 이후 환율이 올라도 이 상품의 원가는 바뀌지 않습니다. 동시에
+              시트의 ‘판매 완료’ 탭에도 이 내용이 한 줄로 기록됩니다.
             </p>
             {isSoldStatus(stockStatus) && (
               <p className="mt-1.5 text-[10.5px] leading-relaxed text-foreground-500">

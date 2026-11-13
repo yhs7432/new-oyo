@@ -4,7 +4,7 @@ import { useFxRate } from '@/hooks/useFxRate';
 import { formatKrw, formatThb } from '@/pages/admin/utils';
 import { archiveSaleEntry, isWriterReady, updateSheetRows } from '@/services/sheetWrite';
 import { isSoldItem } from '@/utils/settlement';
-import { CATEGORY_LABEL, SALE_DATE, writeNoteValue } from '@/utils/sheetNote';
+import { CATEGORY_LABEL, SALE_DATE, noteKrPrice, writeNoteValue } from '@/utils/sheetNote';
 
 interface Props {
   items: Product[];
@@ -100,6 +100,8 @@ export default function SaleRecoveryPanel({ items, staffName, onDone }: Props) {
       const revenue = product.priceOnRequest ? 0 : product.price;
       const costKrw = costKrwOf(product);
       const costThb = rate > 0 ? costKrw / rate : 0;
+      /** 비고에 적힌 원화 판매가가 없으면 판매가를 환산해 채웁니다. */
+      const krPrice = noteKrPrice(product.raw?.['비고'] ?? '') || Math.round(revenue * rate);
       const result = await archiveSaleEntry({
         판매일: saleDate,
         재고번호: product.id,
@@ -113,6 +115,8 @@ export default function SaleRecoveryPanel({ items, staffName, onDone }: Props) {
         'VAT(THB)': 0,
         '웹수수료(THB)': 0,
         '순수익(THB)': Math.round(revenue - costThb),
+        '한국판매가(KRW)': krPrice > 0 ? krPrice : '',
+        '한국순수익(KRW)': krPrice > 0 ? Math.round(krPrice - costKrw) : '',
         환율: rate,
         판매채널: channel,
         담당자: staffName,

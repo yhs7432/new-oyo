@@ -93,9 +93,14 @@ export default function SheetPanel({ items, loading, error, onRetry, staffName }
         </p>
         <p className="mt-1.5 text-[11px] leading-relaxed text-secondary-800">
           판매·출고 화면에서 “판매 완료”를 누르면 같은 스프레드시트 안에 <strong className="font-medium">판매 완료</strong> 탭이
-          생기고, 판매일·재고번호·상품명·판매가·원가·VAT·웹 수수료·순수익·판매채널·담당자·메모가 한 줄씩
-          쌓입니다. 같은 재고번호를 다시 저장하면 새 줄을 만들지 않고 그 줄만 갱신합니다. 메인 시트의 행은
+          생기고, 판매일·재고번호·상품명·판매가·원가·VAT·웹 수수료·순수익·한국 판매가·한국 판매 순수익·판매채널·담당자·메모가
+          한 줄씩 쌓입니다. 같은 재고번호를 다시 저장하면 새 줄을 만들지 않고 그 줄만 갱신합니다. 메인 시트의 행은
           지우지 않으므로 정산 숫자는 그대로 유지됩니다.
+        </p>
+        <p className="mt-1.5 text-[11px] leading-relaxed text-secondary-800">
+          <i className="ri-information-line mr-1"></i>
+          이미 쓰고 있는 시트에 ‘한국판매가(KRW)’·‘한국순수익(KRW)’ 칸이 없다면, 아래 스크립트 코드를 다시 복사해
+          붙여 넣고 새로 배포한 뒤 상품을 한 번씩 저장해 주세요. 머리글 오른쪽 끝에 두 칸이 자동으로 추가됩니다.
         </p>
       </div>
 

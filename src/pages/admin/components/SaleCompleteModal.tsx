@@ -13,6 +13,7 @@ import {
   VAT_RATE,
   noteAmount,
   noteFxRate,
+  noteKrPrice,
   noteRate,
   readNoteValue,
   writeNoteValue,
@@ -108,6 +109,13 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
   const netThb = saleThb - costThb - vatAmount - feeAmount;
   const marginPercent = saleThb > 0 ? Math.round((netThb / saleThb) * 100) : 0;
 
+  /** 한국 판매 기준 금액입니다. 비고에 적힌 원화 판매가가 없으면 판매가를 환산해 씁니다. */
+  const krPriceKrw =
+    noteKrPrice(note) > 0 ? noteKrPrice(note) : Math.round(saleThb * appliedRate);
+  const krVatKrw = (krPriceKrw * vatRateValue) / 100;
+  const krFeeKrw = feeAmount * appliedRate;
+  const krNetKrw = krPriceKrw - costKrw - krVatKrw - krFeeKrw;
+
   const submit = async () => {
     if (saleThb <= 0) {
       setState('error');
@@ -160,6 +168,8 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
       'VAT(THB)': Math.round(vatAmount),
       '웹수수료(THB)': Math.round(feeAmount),
       '순수익(THB)': Math.round(netThb),
+      '한국판매가(KRW)': krPriceKrw > 0 ? Math.round(krPriceKrw) : '',
+      '한국순수익(KRW)': krPriceKrw > 0 ? Math.round(krNetKrw) : '',
       환율: appliedRate,
       판매채널: channel,
       담당자: staffName,
@@ -383,6 +393,21 @@ export default function SaleCompleteModal({ product, staffName, onClose, onCompl
                 <span className="ml-1.5 text-[10.5px] text-foreground-500">마진 {marginPercent}%</span>
               </span>
             </div>
+            {krPriceKrw > 0 && (
+              <div className="mt-1.5 flex flex-wrap items-center justify-between gap-2 rounded-md bg-background-100/80 px-2.5 py-1.5">
+                <span className="flex flex-wrap items-center gap-1.5 whitespace-nowrap text-[11.5px] text-foreground-700">
+                  <span className="rounded-full bg-accent-100 px-1.5 py-0.5 text-[10px] text-accent-900">
+                    한국 판매
+                  </span>
+                  판매가 {formatKrw(krPriceKrw)}
+                </span>
+                <span
+                  className={`text-[11.5px] ${krNetKrw >= 0 ? 'text-secondary-900' : 'text-accent-800'}`}
+                >
+                  순수익 {formatKrw(krNetKrw)}
+                </span>
+              </div>
+            )}
           </div>
 
           {state !== 'idle' && (
