@@ -89,7 +89,7 @@ export default function ProductCard({ product }: { product: Product }) {
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-3.5">
+      <div className="flex flex-1 flex-col p-3 md:p-3.5">
         <p className="truncate text-[9.5px] uppercase tracking-[0.16em] text-foreground-500">
           {product.brand} &middot; {t(`types.${product.type}`)}
         </p>

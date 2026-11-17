@@ -147,7 +147,7 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
             />
 
             {showLoading ? (
-              <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5">
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5">
                 {Array.from({ length: 10 }).map((_, index) => (
                   <div
                     key={index}
@@ -181,7 +181,7 @@ export default function CataloguePage({ category }: { category?: CategoryKey }) 
                 </button>
               </div>
             ) : visible.length > 0 ? (
-              <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5">
+              <div className="mt-8 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4 lg:gap-5 xl:grid-cols-5">
                 {visible.map((product) => (
                   <ProductCard key={product.id} product={product} />
                 ))}
