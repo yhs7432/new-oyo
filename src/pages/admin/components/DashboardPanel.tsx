@@ -14,6 +14,14 @@ interface Props {
   onTab: (tab: AdminTab) => void;
 }
 
+/** 시트의 한국원가(KRW)를 우선 쓰고, 없으면 판매 기록에 고정된 원가를 사용합니다. */
+function costKrwOf(item: Product): number {
+  const rawCost = Number(String(item.raw?.['한국원가(KRW)'] ?? '').replace(/[^0-9]/g, ''));
+  if (Number.isFinite(rawCost) && rawCost > 0) return rawCost;
+  const recorded = item.saleRecord?.costKrw ?? 0;
+  return Number.isFinite(recorded) && recorded > 0 ? recorded : 0;
+}
+
 export default function DashboardPanel({ items, loading, error, onRetry, onTab }: Props) {
   const { rate, base, auto, rateDate } = useFxRate();
 
@@ -21,11 +29,11 @@ export default function DashboardPanel({ items, loading, error, onRetry, onTab }
     const available = countStatus(items, '가능');
     const reserved = countStatus(items, '예약');
     const sold = countStatus(items, '완료');
-    const priced = items.filter((item) => !item.priceOnRequest);
-    const totalThb = priced.reduce((sum, item) => sum + item.price, 0);
-    const noPrice = items.length - priced.length;
+    const costed = items.filter((item) => costKrwOf(item) > 0);
+    const totalCostKrw = costed.reduce((sum, item) => sum + costKrwOf(item), 0);
+    const noPrice = items.filter((item) => item.priceOnRequest).length;
     const noPhoto = items.filter((item) => (item.images?.length ?? 0) === 0).length;
-    return { available, reserved, sold, totalThb, noPrice, noPhoto, priced: priced.length };
+    return { available, reserved, sold, totalCostKrw, noPrice, noPhoto, costed: costed.length };
   }, [items]);
 
   const recent = useMemo(
@@ -144,19 +152,20 @@ export default function DashboardPanel({ items, loading, error, onRetry, onTab }
       <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="rounded-lg border border-background-200 bg-background-50 p-4">
           <p className="text-[10.5px] uppercase tracking-[0.12em] text-foreground-500">
-            판매가 기준 재고 금액
+            원가 기준 재고 금액
           </p>
           <div className="mt-2 flex flex-wrap items-end gap-x-4 gap-y-1">
             <strong className="font-heading text-2xl font-normal text-foreground-950">
-              {formatThb(summary.totalThb)}
+              {formatThb(rate > 0 ? summary.totalCostKrw / rate : 0)}
             </strong>
             <span className="text-[12px] text-foreground-600">
-              약 {formatKrw(summary.totalThb * rate)} · {formatFxRate(rate, base)}
+              약 {formatKrw(summary.totalCostKrw)} ·{' '}
+              {formatFxRate(rate, base)}
               {auto && rateDate ? ` (${rateDate} 자동)` : ''}
             </span>
           </div>
           <p className="mt-1.5 text-[11px] text-foreground-500">
-            가격이 입력된 {summary.priced.toLocaleString('en-US')}개 상품 기준입니다.
+            원가가 입력된 {summary.costed.toLocaleString('en-US')}개 상품 기준입니다.
           </p>
         </div>
         <div className="rounded-lg border border-background-200 bg-background-50 p-4">
