@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { isBackendConfigured, supabase } from '@/services/supabase';
+import { isInvalidRefreshTokenError, recoverAuthSession } from '@/services/authRecovery';
 import type { AdminIdentity, AdminRole } from '@/config/admin';
 import { ROLE_OPTIONS } from '@/config/admin';
 
@@ -93,9 +94,20 @@ export function useAdminAuth() {
 
     const readSession = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          if (isInvalidRefreshTokenError(error)) {
+            await recoverAuthSession();
+            if (active) setIdentity(null);
+            return;
+          }
+          throw error;
+        }
         if (active) setIdentity(toAdminUser(data.session?.user ?? null));
-      } catch {
+      } catch (caught) {
+        if (isInvalidRefreshTokenError(caught)) {
+          await recoverAuthSession();
+        }
         if (active) setIdentity(null);
       } finally {
         if (active) setLoading(false);

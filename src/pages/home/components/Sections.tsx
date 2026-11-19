@@ -13,9 +13,9 @@ export function About() {
         <div className="w-full lg:w-[44%]">
           <div className="aspect-[4/5] w-full overflow-hidden rounded-lg bg-background-100">
             <img
-              src="https://oyogolftest.netlify.app/assets/about-inspection-v1.webp"
-              alt="Golf equipment inspection in a workshop"
-              title="Golf club inspection OYO GOLF"
+              src="https://readdy.ai/api/search-image?query=Real%20documentary%20photograph%20of%20a%20golf%20club%20technician%20hands%20re-gripping%20a%20steel%20shaft%20at%20a%20workbench%20with%20tools%2C%20grips%20and%20club%20heads%20nearby%2C%20warm%20natural%20window%20light%2C%20shallow%20depth%20of%20field%2C%20no%20text%2C%20authentic%20workshop%20scene&width=800&height=1000&seq=oyogolf-about-bench-7742&orientation=portrait&nocache=true"
+              alt="Technician re-gripping a golf club shaft at a workshop bench"
+              title="Golf club workshop OYO GOLF"
               className="h-full w-full object-cover object-top"
             />
           </div>

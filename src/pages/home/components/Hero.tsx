@@ -11,13 +11,13 @@ export default function Hero() {
     <section id="home" className="relative bg-foreground-950">
       <div className="absolute inset-0 h-full w-full">
         <img
-          src="https://oyogolftest.netlify.app/assets/home-background-v2.webp"
-          alt="Vintage clubhouse, leather golf bag and golf course at sunset"
-          title="OYO GOLF premium golf clubs"
+          src="https://readdy.ai/api/search-image?query=Authentic%20wide%20photograph%20of%20a%20pristine%20golf%20course%20fairway%20at%20sunrise%2C%20long%20shadows%20stretching%20across%20dewy%20grass%2C%20sculpted%20sand%20bunkers%2C%20distant%20tree%20line%20and%20a%20small%20white%20flag%2C%20soft%20golden%20light%2C%20clear%20sky%2C%20no%20people%2C%20no%20text%2C%20real%20landscape%20photography%2C%20high%20detail&width=1920&height=1080&seq=oyogolf-hero-fairway-0812&orientation=landscape&nocache=true"
+          alt="Sunrise over a pristine golf fairway with bunkers and a distant tree line"
+          title="OYO GOLF premium golf equipment clubhouse"
           className="h-full w-full object-cover object-top"
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-black/15"></div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/20"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-black/45 via-black/15 to-transparent"></div>
+        <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-transparent"></div>
       </div>
 
       <div className="relative mx-auto w-full max-w-[1320px] px-5 pb-14 pt-32 md:px-10 md:pb-20 md:pt-48">
@@ -31,7 +31,7 @@ export default function Hero() {
             {t('hero.eyebrow')}
           </p>
           <h1
-            className={`break-words font-heading text-background-50 ${
+            className={`break-words font-heading text-background-50 [text-shadow:0_2px_18px_rgba(0,0,0,0.55)] ${
               isThai
                 ? 'text-[29px] leading-[1.5] tracking-[0] md:text-[46px] md:leading-[1.42]'
                 : 'text-[34px] leading-[1.18] md:text-6xl md:leading-[1.14]'
@@ -42,7 +42,7 @@ export default function Hero() {
             <span className="text-primary-400">{t('hero.title2')}</span>
           </h1>
           <p
-            className={`max-w-xl text-background-200 ${
+            className={`max-w-xl text-background-100 [text-shadow:0_1px_12px_rgba(0,0,0,0.5)] ${
               isThai
                 ? 'mt-7 text-[13.5px] leading-[2] md:text-[15px] md:leading-[1.95]'
                 : 'mt-6 text-[13.5px] leading-[1.85] md:text-[15px]'
