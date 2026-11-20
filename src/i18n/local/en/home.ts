@@ -100,6 +100,7 @@ export default {
     available: 'Available',
     priceOnRequest: 'Price on request',
     noPhoto: 'Photo coming',
+    brandNew: 'Brand new',
     loading: 'Loading products…',
     liveSheet: 'Live stock from our Google Sheet',
     stockCount: '{{count}} in stock',

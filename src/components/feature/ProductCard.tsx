@@ -12,6 +12,7 @@ export default function ProductCard({ product }: { product: Product }) {
   const soldOut = product.stock <= 0;
   const reserved = product.stockStatus === '예약';
   const missingPhoto = !hasPhoto(product);
+  const isNewItem = product.category === 'events';
 
   const [hoverBroken, setHoverBroken] = useState(false);
   const gallery = Array.isArray(product.images) ? product.images : [];
@@ -46,16 +47,23 @@ export default function ProductCard({ product }: { product: Product }) {
             className="absolute inset-0 h-full w-full scale-100 object-cover object-top opacity-0 transition-all duration-700 group-hover:scale-105 group-hover:opacity-100"
           />
         )}
-        {discount > 0 && (
-          <span className="absolute left-3 top-3 rounded-full bg-primary-500 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-foreground-950">
-            -{discount}%
-          </span>
-        )}
-        {discount === 0 && product.headGrade && (
-          <span className="absolute left-3 top-3 rounded-full bg-background-50/95 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-foreground-900 ring-1 ring-background-300">
-            {product.headGrade}
-          </span>
-        )}
+        <div className="absolute left-3 top-3 flex flex-col items-start gap-1.5">
+          {isNewItem && (
+            <span className="rounded-full bg-secondary-500 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-background-50">
+              {t('catalogue.brandNew')}
+            </span>
+          )}
+          {discount > 0 && (
+            <span className="rounded-full bg-primary-500 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-foreground-950">
+              -{discount}%
+            </span>
+          )}
+          {!isNewItem && discount === 0 && product.headGrade && (
+            <span className="rounded-full bg-background-50/95 px-2.5 py-1 text-[10px] font-semibold tracking-wide text-foreground-900 ring-1 ring-background-300">
+              {product.headGrade}
+            </span>
+          )}
+        </div>
         {reserved && (
           <span className="absolute right-3 top-3 rounded-full bg-accent-500 px-2.5 py-1 text-[10px] font-medium tracking-wide text-foreground-950">
             {t('catalogue.reserved')}

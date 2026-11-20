@@ -100,6 +100,7 @@ export default {
     available: 'พร้อมจำหน่าย',
     priceOnRequest: 'สอบถามราคา',
     noPhoto: 'กำลังเพิ่มรูป',
+    brandNew: 'ของใหม่',
     loading: 'กำลังโหลดสินค้า…',
     liveSheet: 'สต็อกอัปเดตจาก Google Sheet',
     stockCount: 'มี {{count}} ชิ้น',

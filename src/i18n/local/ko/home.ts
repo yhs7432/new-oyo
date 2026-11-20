@@ -100,6 +100,7 @@ export default {
     available: '판매 가능',
     priceOnRequest: '가격 문의',
     noPhoto: '사진 준비 중',
+    brandNew: '새상품',
     loading: '상품을 불러오는 중…',
     liveSheet: '구글시트 재고와 실시간 연동',
     stockCount: '{{count}}개 보유',

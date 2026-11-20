@@ -105,11 +105,13 @@ export default function ProductDetailPage() {
   const discount = discountPercent(product);
   const reserved = product.stockStatus === '예약';
   const missingPhoto = !hasPhoto(product);
+  /* 특가(새상품) 상품은 중고 등급·상태 대신 새상품 표시만 보여 줍니다. */
+  const isNewProduct = product.category === 'events';
   const gradeRows = [
     { key: 'grade', label: t('product.grade'), value: product.headGrade },
     { key: 'shaft', label: t('product.shaft'), value: product.shaftGrade },
     { key: 'grip', label: t('product.grip'), value: product.gripGrade },
-  ].filter((row) => Boolean(row.value));
+  ].filter((row) => Boolean(row.value) && !isNewProduct);
 
   const specRows = [
     { key: 'type', value: t(`types.${product.type}`) },
@@ -251,6 +253,11 @@ export default function ProductDetailPage() {
                 </div>
 
                 <div className="mt-4 flex flex-wrap items-center gap-2">
+                  {isNewProduct && (
+                    <span className="rounded-full bg-secondary-500 px-3 py-1 text-[11px] font-medium text-background-50">
+                      {t('catalogue.brandNew')}
+                    </span>
+                  )}
                   <span
                     className={`rounded-full px-3 py-1 text-[11px] ${
                       product.location === 'TH'
@@ -304,7 +311,7 @@ export default function ProductDetailPage() {
                       <dd className="text-right text-[12.5px] text-foreground-800">{row.value}</dd>
                     </div>
                   ))}
-                  {typeof product.conditionPercent === 'number' && (
+                  {!isNewProduct && typeof product.conditionPercent === 'number' && (
                     <div className="flex items-center justify-between gap-4 px-3 py-2.5">
                       <dt className="text-[11.5px] uppercase tracking-[0.1em] text-foreground-500">
                         {t('product.conditionPercent')}
